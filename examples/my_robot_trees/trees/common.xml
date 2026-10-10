@@ -1,13 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <root BTCPP_format="4">
-  <BehaviorTree ID="Shoot">
-    <Sequence>
-      <SetShooterTarget target="HUB"/>
-      <SetShooterState state="SHOOT"/>
-      <SetIntakeState state="SQUEEZE"/>
-      <Sleep msec="2000"/>
-    </Sequence>
-  </BehaviorTree>
   <BehaviorTree ID="RunIntake">
     <Sequence>
       <WaitForChoreoEvent event="Intake Out"/>
@@ -18,10 +10,31 @@
   </BehaviorTree>
   <BehaviorTree ID="Turtle">
     <Sequence>
-      <SetShooterTarget target="HUB"/>
       <SetShooterState state="IDLE"/>
       <SetIntakeState state="STORE"/>
       <Sleep msec="1000"/>
     </Sequence>
   </BehaviorTree>
+  <BehaviorTree ID="IntakeOnEvent">
+    <Sequence>
+      <WaitForChoreoEvent event="{event}"/>
+      <SetIntakeState state="{state}"/>
+    </Sequence>
+  </BehaviorTree>
+  <BehaviorTree ID="ShootFor">
+    <Sequence>
+      <SetShooterState state="SHOOT"/>
+      <SetIntakeState state="SQUEEZE"/>
+      <Sleep msec="{duration_msec}"/>
+    </Sequence>
+  </BehaviorTree>
+  <TreeNodesModel>
+    <SubTree ID="IntakeOnEvent">
+      <input_port name="event" type="std::string">Choreo event marker to wait for</input_port>
+      <input_port name="state" type="IntakeStates" default="INTAKE">Intake state to request when it passes</input_port>
+    </SubTree>
+    <SubTree ID="ShootFor">
+      <input_port name="duration_msec" type="int" default="2000">How long to shoot</input_port>
+    </SubTree>
+  </TreeNodesModel>
 </root>
