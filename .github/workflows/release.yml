@@ -59,7 +59,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: arbor-${{ matrix.target }}
-          path: pkg/*.*
+          path: |
+            pkg/*.tar.gz
+            pkg/*.zip
           if-no-files-found: error
 
   release:
