@@ -3,9 +3,9 @@
   <BehaviorTree ID="Shoot">
     <Sequence>
       <SetShooterTarget target="HUB"/>
-      <SetShooterState state="IDLE"/>
-      <SetIntakeState state="STORE"/>
-      <Sleep msec="1000"/>
+      <SetShooterState state="SHOOT"/>
+      <SetIntakeState state="SQUEEZE"/>
+      <Sleep msec="2000"/>
     </Sequence>
   </BehaviorTree>
   <BehaviorTree ID="RunIntake">
@@ -14,6 +14,14 @@
       <SetIntakeState state="INTAKE"/>
       <WaitForChoreoEvent event="Intake In"/>
       <SetIntakeState state="STORE"/>
+    </Sequence>
+  </BehaviorTree>
+  <BehaviorTree ID="Turtle">
+    <Sequence>
+      <SetShooterTarget target="HUB"/>
+      <SetShooterState state="IDLE"/>
+      <SetIntakeState state="STORE"/>
+      <Sleep msec="1000"/>
     </Sequence>
   </BehaviorTree>
 </root>

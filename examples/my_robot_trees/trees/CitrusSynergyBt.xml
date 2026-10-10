@@ -2,7 +2,7 @@
 <root BTCPP_format="4" main_tree_to_execute="CitrusSynergy">
   <BehaviorTree ID="CitrusSynergy">
     <Sequence name="CitrusSynergy">
-      <SubTree ID="Shoot"/>
+      <SubTree ID="Turtle"/>
       <Parallel name="DriveP1" success_count="1" failure_count="1">
         <FollowTrajectory trajectory="SynergyP1" end_state="IDLE"/>
         <Sequence name="P1Events">
