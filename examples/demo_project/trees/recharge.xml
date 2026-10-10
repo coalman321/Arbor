@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4">
+  <BehaviorTree ID="Recharge">
+    <Sequence>
+      <Say message="Battery low, going to charge"/>
+      <Fallback>
+        <IsAtLocation location="dock"/>
+        <MoveTo location="dock"/>
+      </Fallback>
+      <Dock/>
+      <ChargeUntil percent="{target_percent}"/>
+    </Sequence>
+  </BehaviorTree>
+  <TreeNodesModel>
+    <SubTree ID="Recharge">
+      <input_port name="target_percent" type="double" default="90">Battery level to charge to</input_port>
+    </SubTree>
+  </TreeNodesModel>
+</root>

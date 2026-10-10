@@ -1,0 +1,8 @@
+{
+  "name": "my_robot_trees",
+  "nodes": "nodes.xml",
+  "trees": "trees",
+  "live": {
+    "url": "ws://localhost:1670"
+  }
+}

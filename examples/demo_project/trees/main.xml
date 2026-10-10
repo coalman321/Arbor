@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4" main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree" _description="Fetch objects while keeping the battery charged">
+    <ReactiveFallback name="root">
+      <Sequence name="recharge_if_needed">
+        <Inverter>
+          <IsBatteryOk min_percent="25"/>
+        </Inverter>
+        <SubTree ID="Recharge" target_percent="95"/>
+      </Sequence>
+      <Sequence name="work">
+        <Script code="attempts := 0"/>
+        <RetryUntilSuccessful num_attempts="3">
+          <SubTree ID="FetchObject" object="cup" destination="kitchen" attempts="{attempts}"/>
+        </RetryUntilSuccessful>
+        <IfThenElse>
+          <ScriptCondition code="attempts &gt; 1"/>
+          <Say message="Got it, eventually"/>
+          <Say message="Done fetching"/>
+        </IfThenElse>
+      </Sequence>
+    </ReactiveFallback>
+  </BehaviorTree>
+</root>

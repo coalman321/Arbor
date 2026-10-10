@@ -147,3 +147,9 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+.DS_Store
+
+# Release binaries
+build/
+release/

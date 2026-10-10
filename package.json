@@ -1,0 +1,41 @@
+{
+  "name": "arbor",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "description": "Project-based editor and live viewer for BehaviorTree.CPP v4 trees",
+  "type": "module",
+  "bin": {
+    "arbor": "./bin/arbor.js"
+  },
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/server/main.ts --dev --project examples/demo_project",
+    "build": "vite build",
+    "start": "tsx src/server/main.ts",
+    "mock-robot": "tsx src/mock/main.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "build:binary": "vite build && node scripts/build_binary.mjs"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^5.2.5",
+    "tsx": "^4.20.3",
+    "ws": "^8.18.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@types/ws": "^8.18.1",
+    "@vitejs/plugin-react": "^4.6.0",
+    "@xyflow/react": "^12.8.1",
+    "esbuild": "^0.28.2",
+    "postject": "^1.0.0-alpha.6",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.4",
+    "vitest": "^5.0.3",
+    "zustand": "^5.0.6"
+  }
+}

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4">
+  <BehaviorTree ID="FetchObject" _description="Find an object, pick it up and bring it somewhere">
+    <Sequence>
+      <Script code="attempts += 1"/>
+      <Fallback name="find_object">
+        <DetectObject object_type="{object}" pose="{object_pose}"/>
+        <Sequence name="search">
+          <MoveTo location="search_area"/>
+          <DetectObject object_type="{object}" pose="{object_pose}"/>
+        </Sequence>
+      </Fallback>
+      <Precondition if="attempts &lt;= 3" else="FAILURE">
+        <Pick pose="{object_pose}"/>
+      </Precondition>
+      <MoveTo location="{destination}" speed="0.3"/>
+      <Place location="{destination}"/>
+    </Sequence>
+  </BehaviorTree>
+  <TreeNodesModel>
+    <SubTree ID="FetchObject">
+      <input_port name="object" type="std::string">Object class to fetch</input_port>
+      <input_port name="destination" type="std::string">Where to bring it</input_port>
+      <inout_port name="attempts" type="int">Incremented on every try</inout_port>
+    </SubTree>
+  </TreeNodesModel>
+</root>

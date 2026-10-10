@@ -1,0 +1,6 @@
+{
+  "name": "demo_project",
+  "nodes": "nodes.xml",
+  "trees": "trees",
+  "live": { "url": "ws://localhost:1670" }
+}

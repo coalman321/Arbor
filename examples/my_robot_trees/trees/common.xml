@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4">
+  <BehaviorTree ID="Shoot">
+    <Sequence>
+      <SetShooterTarget target="HUB"/>
+      <SetShooterState state="IDLE"/>
+      <SetIntakeState state="STORE"/>
+      <Sleep msec="1000"/>
+    </Sequence>
+  </BehaviorTree>
+  <BehaviorTree ID="RunIntake">
+    <Sequence>
+      <WaitForChoreoEvent event="Intake Out"/>
+      <SetIntakeState state="INTAKE"/>
+      <WaitForChoreoEvent event="Intake In"/>
+      <SetIntakeState state="STORE"/>
+    </Sequence>
+  </BehaviorTree>
+</root>
