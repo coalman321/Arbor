@@ -1,0 +1,48 @@
+name: CI
+
+# Typechecks, tests and builds the standalone `arbor` executable on every platform the release ships.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, target: linux-x64 }
+          - { os: ubuntu-24.04-arm, target: linux-arm64 }
+          - { os: macos-latest, target: macos-arm64 }
+          - { os: macos-15-intel, target: macos-x64 }
+          - { os: windows-latest, target: windows-x64 }
+          - { os: windows-11-arm, target: windows-arm64 }
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build:binary
+
+      - name: Smoke test
+        shell: bash
+        run: |
+          ./release/arbor init smoke-project
+          test -f smoke-project/bt_project.json
