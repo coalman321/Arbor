@@ -1,0 +1,3 @@
+# Check out text files with LF on every platform. The XML round-trip tests
+# compare serializer output byte for byte against the files in examples/.
+* text=auto eol=lf
