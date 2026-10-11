@@ -1,12 +1,50 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <!-- Bark shading across a log's width, so the connectors read as round logs seen from the side -->
+    <linearGradient id="logV" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#4a2a12"/>
+      <stop offset="0.4" stop-color="#9a6434"/>
+      <stop offset="0.55" stop-color="#a8723f"/>
+      <stop offset="1" stop-color="#4a2a12"/>
+    </linearGradient>
+    <linearGradient id="logH" href="#logV" x1="0" y1="0" x2="0" y2="1"/>
+    <!-- Sawn end grain: pale heartwood darkening toward the bark -->
+    <radialGradient id="endgrain" cx="0.47" cy="0.45" r="0.55">
+      <stop offset="0" stop-color="#f3d7a2"/>
+      <stop offset="0.7" stop-color="#e0b274"/>
+      <stop offset="1" stop-color="#bf8a50"/>
+    </radialGradient>
+    <!-- A log end of radius 3, centered on the origin -->
+    <g id="logEnd">
+      <circle r="3" fill="url(#endgrain)" stroke="#4a2a12" stroke-width="0.7"/>
+      <g fill="none" stroke="#a8743f" stroke-width="0.24">
+        <circle cx="0.15" cy="-0.1" r="1.75"/>
+        <circle cx="0.25" cy="-0.15" r="0.85"/>
+      </g>
+      <circle cx="0.3" cy="-0.2" r="0.3" fill="#8a5a2c"/>
+      <path d="M0.5 0.1 1.6 1.2" stroke="#8a5a2c" stroke-width="0.2" stroke-linecap="round"/>
+    </g>
+  </defs>
   <rect width="32" height="32" rx="7" fill="#2563eb"/>
-  <g fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round">
-    <path d="M16 11.2V14M9 14h14M9 14v3.6M16 14v3.6M23 14v3.6"/>
-  </g>
-  <g fill="#ffffff">
-    <circle cx="16" cy="8.5" r="3"/>
-    <circle cx="9" cy="21.5" r="2.6"/>
-    <circle cx="16" cy="21.5" r="2.6"/>
-    <circle cx="23" cy="21.5" r="2.6"/>
+  <g transform="translate(0 0.9)">
+    <!-- Upright logs: the root's stem and the three drops, tucked behind the crossbar and log ends -->
+    <g fill="url(#logV)" stroke="#3a200c" stroke-width="0.35">
+      <rect x="14.6" y="9" width="2.8" height="5.5"/>
+      <rect x="7.6" y="14" width="2.8" height="5.5"/>
+      <rect x="14.6" y="14" width="2.8" height="5.5"/>
+      <rect x="21.6" y="14" width="2.8" height="5.5"/>
+    </g>
+    <!-- The crossbar log, with its sawn ends showing -->
+    <rect x="7" y="12.6" width="18" height="2.8" fill="url(#logH)" stroke="#3a200c" stroke-width="0.35"/>
+    <path d="M8.6 13.4h4.6M14 14.5h5.2M19.6 13.5h3.6M10.2 14.6h2.4" stroke="#4a2a12" stroke-width="0.2" stroke-linecap="round" opacity="0.7"/>
+    <g fill="#e9c085" stroke="#3a200c" stroke-width="0.3">
+      <ellipse cx="7" cy="14" rx="0.75" ry="1.4"/>
+      <ellipse cx="25" cy="14" rx="0.75" ry="1.4"/>
+    </g>
+    <!-- The nodes, as log ends -->
+    <use href="#logEnd" transform="translate(16 7.9) scale(1.07)"/>
+    <use href="#logEnd" transform="translate(9 21.5)"/>
+    <use href="#logEnd" transform="translate(16 21.5) rotate(120)"/>
+    <use href="#logEnd" transform="translate(23 21.5) rotate(240)"/>
   </g>
 </svg>

@@ -6,7 +6,7 @@ import type { BrowseResult, WorkspaceInfo } from "../../shared/model.ts";
 import { api } from "../api.ts";
 import { useDismiss } from "../dismiss.ts";
 import { pickLogFile } from "./ReplayBar.tsx";
-import { Logo } from "./Logo.tsx";
+import { Logo, Wordmark } from "./Logo.tsx";
 import {
   confirmDiscard,
   importTreeFile,
@@ -277,7 +277,7 @@ export function Welcome() {
     <div className="welcome">
       <div className="welcome-card">
         <h1>
-          <Logo /> Arbor
+          <Wordmark />
         </h1>
         <p className="muted">The behavior tree editor. Open a project to start, or make a new one.</p>
         <div className="row welcome-actions">

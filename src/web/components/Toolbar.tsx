@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Logo } from "./Logo.tsx";
+import { Wordmark } from "./Logo.tsx";
 import { ProjectMenu } from "./ProjectUI.tsx";
 import { useDismiss } from "../dismiss.ts";
 import { closeReplay } from "../replay.ts";
@@ -14,9 +14,8 @@ export function Toolbar() {
 
   return (
     <header className="toolbar">
-      <div className="app-brand" aria-label="Arbor">
-        <Logo />
-        <span>Arbor</span>
+      <div className="app-brand">
+        <Wordmark />
       </div>
       <ProjectMenu />
       <div className="toolbar-group">

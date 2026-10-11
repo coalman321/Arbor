@@ -283,9 +283,8 @@ hr {
   color: var(--accent);
   user-select: none;
 }
-.app-brand .logo {
-  width: 1.5em;
-  height: 1.5em;
+.app-brand .wordmark {
+  height: 26px;
 }
 .brand {
   font-weight: 650;
@@ -293,6 +292,10 @@ hr {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+.wordmark {
+  display: block;
+  width: auto;
 }
 .logo {
   color: var(--accent);
@@ -1818,11 +1821,11 @@ button.brand:hover {
   box-shadow: var(--shadow);
 }
 .welcome-card h1 {
-  margin: 0 0 4px;
-  font-size: 22px;
+  margin: 0 0 12px;
   display: flex;
-  align-items: center;
-  gap: 8px;
+}
+.welcome-card h1 .wordmark {
+  height: 60px;
 }
 .welcome-actions {
   margin: 16px 0 4px;
