@@ -14,6 +14,7 @@ import {
   useModels,
   useStore,
 } from "../store.ts";
+import { useDismiss } from "../dismiss.ts";
 import { PALETTE_MIME } from "./Canvas.tsx";
 import { iconFor } from "./icons.ts";
 
@@ -80,16 +81,11 @@ function TreeMenuPopup({ menu, close }: { menu: TreeMenu; close: () => void }) {
   const trees = useStore((s) => s.trees);
   const files = useStore((s) => s.files);
   const ref = useRef<HTMLDivElement>(null);
+  useDismiss(ref, close);
   useEffect(() => {
-    const down = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && close();
-    const key = (e: KeyboardEvent) => e.key === "Escape" && close();
-    window.addEventListener("mousedown", down);
-    window.addEventListener("keydown", key);
     window.addEventListener("scroll", close, true);
     window.addEventListener("resize", close);
     return () => {
-      window.removeEventListener("mousedown", down);
-      window.removeEventListener("keydown", key);
       window.removeEventListener("scroll", close, true);
       window.removeEventListener("resize", close);
     };

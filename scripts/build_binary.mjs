@@ -12,6 +12,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { build } from "esbuild";
+import { addLicenses, collectLicenses, metafileInputs } from "./licenses.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const { values } = parseArgs({ options: { out: { type: "string", default: "release/arbor" } } });
@@ -29,7 +30,7 @@ mkdirSync(dirname(exe), { recursive: true });
 
 // SEA entry points must be CommonJS, where import.meta is empty; stand in the executable's path.
 const bundle = join(work, "arbor.cjs");
-await build({
+const server = await build({
   entryPoints: [join(root, "src", "server", "main.ts")],
   outfile: bundle,
   bundle: true,
@@ -41,7 +42,11 @@ await build({
   // vite is only loaded for --dev; ws's native speedups are optional.
   external: ["vite", "bufferutil", "utf-8-validate"],
   logLevel: "warning",
+  metafile: true,
+  absWorkingDir: root,
 });
+// The frontend's notices are in dist/licenses.json already; add the server's before embedding dist/.
+addLicenses(join(dist, "licenses.json"), collectLicenses(metafileInputs(server.metafile, root)));
 
 const assets = {};
 const walk = (dir) => {
