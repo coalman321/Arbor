@@ -49,3 +49,11 @@ jobs:
         run: |
           node bin/arbor.js init smoke-project
           test -f smoke-project/bt_project.json
+
+  cpp:
+    name: Build btlive (C++)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: cmake -S cpp -B build/cpp -DBTLIVE_FETCH_DEPS=ON -DCMAKE_BUILD_TYPE=Release
+      - run: cmake --build build/cpp --parallel

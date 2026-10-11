@@ -7,7 +7,8 @@ client and only listens, apart from a few requests.
 - **Robot side:** implement the server in your application, for BehaviorTree.CPP 4.x. A
   `BT::StatusChangeLogger` subclass sees every transition, and `BT::Tree::applyVisitor` gives the
   node order described under [Node identity](#node-identity).
-- **Reference server:** the mock robot in [`src/mock/`](../src/mock/).
+- **Reference server:** [`cpp/`](../cpp/) for BehaviorTree.CPP 4.x applications, ready to use.
+  The mock robot in [`src/mock/`](../src/mock/) is a simulated one in TypeScript.
 - **Reference client:** [`src/web/live.ts`](../src/web/live.ts).
 - **Types:** [`src/shared/protocol.ts`](../src/shared/protocol.ts) mirrors this document. Keep the
   two in sync.

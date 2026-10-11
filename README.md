@@ -2,6 +2,8 @@
 
 A local editor and live viewer for [BehaviorTree.CPP](https://www.behaviortree.dev/) v4 trees. It runs as a small Node.js backend that serves a browser UI and reads and writes a **project directory** of plain BT.CPP XML. It can also attach to a running robot and show the tree executing, node by node.
 
+![Arbor editing the demo project's MainTree: trees and node types on the left, the tree on the canvas, and the tree's details on the right](docs/screenshot.png)
+
 ## Quick start
 
 The desktop app for Linux, macOS and Windows (x64 and arm64) is attached to each [GitHub release](https://github.com/coalman321/Arbor/releases): a `.dmg` for macOS, an installer `.exe` for Windows, and an `.AppImage` for Linux. It starts on a screen for opening or creating a project, and quitting it stops everything. The app isn't code-signed yet, so macOS may report it as damaged; run `xattr -cr /Applications/Arbor.app` once to allow it. To build it for your own machine, run `npm run build:desktop`, which writes it to `release/`, or run it from a checkout with `npm run desktop`.
@@ -124,7 +126,7 @@ The editor writes files in a canonical layout: two-space indent, attributes in t
 
 ## Live view
 
-Connect to a robot that runs a [btlive](docs/live_protocol.md) server. The connection goes through thee ditor's backend, so the robot only needs to be reachable from the machine running `npm start`. The editor opens the tree the robot is running and colors it as it executes:
+Connect to a robot that runs a [btlive](docs/live_protocol.md) server. The connection goes through the editor's backend, so the robot only needs to be reachable from the machine running `npm start`. The editor opens the tree the robot is running and colors it as it executes:
 
 - **Orange:** running.
 - **Green / red:** succeeded / failed.
@@ -135,6 +137,8 @@ Statuses show inside SubTrees too: expand them inline, or open the subtree's own
 The bottom panel's **Live log** lists every transition (click one to jump to its node), and **Blackboard** shows each tree instance's entries. **Pause** freezes the display without disconnecting.
 
 The editor pairs the robot's nodes with the project's by tree structure. If the robot runs a different version of a tree than the one open (say, unsaved edits, or an older deploy), the toolbar shows a mismatch badge, and the log lists what differs. The rest of the tree still shows live.
+
+To add the server to a C++ application that uses BehaviorTree.CPP, use the reference implementation in [cpp/](cpp/README.md): construct a `btlive::Server` and `attach()` your tree. It includes a demo that runs `examples/demo_project` on real BehaviorTree.CPP.
 
 The protocol is specified in [docs/live_protocol.md](docs/live_protocol.md).
 
@@ -191,8 +195,10 @@ Hover the time display to see the robot's wall-clock time at the current positio
 src/
 ├── shared/   model types, BT.CPP builtin catalog, validation, XML writer, live protocol and mapping
 ├── server/   backend: CLI, project loading/saving (xml_read.ts, project.ts), file watching, robot relay
+├── desktop/  Electron app: runs the backend and shows the UI in a window
 ├── web/      React + React Flow frontend; store.ts holds all state, actions.ts the edit commands
 └── mock/     mock robot that speaks btlive
+cpp/          btlive server for BehaviorTree.CPP applications, and a demo robot
 ```
 
 The backend owns the files: it parses XML into the JSON model in `shared/model.ts` and writes it back
