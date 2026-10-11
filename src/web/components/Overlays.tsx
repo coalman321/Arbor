@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { NODE_CATEGORIES, type NodeCategory, type NodeModel, type PortDirection, type PortModel } from "../../shared/model.ts";
+import { NODE_CATEGORIES, type AboutInfo, type NodeCategory, type NodeModel, type PortDirection, type PortModel } from "../../shared/model.ts";
 import { allowedChildren } from "../../shared/validate.ts";
+import { api } from "../api.ts";
 import {
   addNode,
   canHaveMoreChildren,
@@ -252,6 +253,62 @@ export function Dialogs() {
         {dialog.kind === "moveTree" && <MoveTreeDialog treeId={dialog.treeId} close={close} />}
         {dialog.kind === "renameTree" && <RenameDialog treeId={dialog.treeId} close={close} />}
         {dialog.kind === "nodeType" && <NodeTypeDialog modelId={dialog.modelId} close={close} />}
+        {dialog.kind === "licenses" && <LicensesDialog close={close} />}
+      </div>
+    </div>
+  );
+}
+
+/** Arbor's licence, and those of the third-party programs this copy ships with. */
+function LicensesDialog({ close }: { close: () => void }) {
+  const [about, setAbout] = useState<AboutInfo | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    api.about().then(setAbout, (e: Error) => setError(e.message));
+  }, []);
+  const git = about?.bundledGit;
+  return (
+    <div className="licenses">
+      <h3>Open-source licences</h3>
+      <section>
+        <h4>Arbor</h4>
+        <p>
+          Released under the{" "}
+          <a href="https://github.com/coalman321/Arbor/blob/main/LICENSE" target="_blank" rel="noreferrer">
+            MIT License
+          </a>
+          .
+        </p>
+      </section>
+      {git && (
+        <section>
+          <h4>Git {git.version}</h4>
+          <p>
+            The desktop app includes Git for computers that don't have it, to compare trees between revisions.{" "}
+            {git.inUse ? "This computer has no Git of its own, so Arbor is using it." : "Arbor is using this computer's own Git instead."}
+          </p>
+          <p>
+            Git is free software under the GNU General Public License, version 2. You can get its{" "}
+            <a href={git.source} target="_blank" rel="noreferrer">
+              source code
+            </a>{" "}
+            and{" "}
+            <a href={git.build} target="_blank" rel="noreferrer">
+              how this build was made
+            </a>
+            .
+          </p>
+          <details>
+            <summary>GNU General Public License, version 2</summary>
+            <pre className="license-text">{git.license}</pre>
+          </details>
+        </section>
+      )}
+      {error && <p className="error-text">{error}</p>}
+      <div className="modal-actions">
+        <button className="primary" onClick={close} autoFocus>
+          Close
+        </button>
       </div>
     </div>
   );

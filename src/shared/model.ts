@@ -251,6 +251,24 @@ export type GitInfo =
       dirty: boolean;
     };
 
+/** The git the desktop app ships with, for machines without their own (GET /api/about). */
+export interface BundledGitInfo {
+  version: string;
+  /** Git's licence (GPLv2), in full. */
+  license: string;
+  /** Git's source at this version. */
+  source: string;
+  /** How this build of git was made, and the other open-source parts it includes. */
+  build: string;
+  /** Whether Arbor is using it, rather than the machine's own git. */
+  inUse: boolean;
+}
+
+/** GET /api/about: third-party software this copy of Arbor ships with. */
+export interface AboutInfo {
+  bundledGit: BundledGitInfo | null;
+}
+
 /** GET /api/git/snapshot: the project as it was at one revision. */
 export interface RevSnapshot {
   rev: string;

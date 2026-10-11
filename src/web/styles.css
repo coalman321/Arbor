@@ -340,6 +340,16 @@ hr {
 .setting input {
   margin-top: 2px;
 }
+.setting-link {
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 6px 10px;
+  border-radius: 5px;
+}
+.setting-link:hover {
+  background: var(--hover);
+}
 .setting-segmented {
   display: flex;
   gap: 4px;
@@ -1696,6 +1706,35 @@ button.brand:hover {
 }
 .menu-footer {
   padding: 4px 10px;
+}
+.modal:has(.licenses) {
+  width: min(560px, calc(100vw - 32px));
+}
+.licenses {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.licenses section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.licenses h4 {
+  margin: 0;
+}
+.licenses summary {
+  cursor: pointer;
+}
+.license-text {
+  max-height: 40vh;
+  overflow: auto;
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+  white-space: pre-wrap;
 }
 .modal:has(.browse) {
   width: min(640px, calc(100vw - 32px));

@@ -19,8 +19,9 @@
     "typecheck": "tsc --noEmit",
     "build:binary": "vite build && node scripts/build_binary.mjs",
     "bundle": "vite build && node scripts/bundle.mjs",
-    "desktop": "npm run bundle && electron .",
-    "build:desktop": "npm run bundle && electron-builder --publish never"
+    "stage-git": "node scripts/stage_git.mjs",
+    "desktop": "npm run bundle && npm run stage-git && electron .",
+    "build:desktop": "npm run bundle && npm run stage-git && electron-builder --publish never"
   },
   "dependencies": {
     "fast-xml-parser": "^5.2.5",
@@ -34,6 +35,7 @@
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^4.6.0",
     "@xyflow/react": "^12.8.1",
+    "dugite": "^3.2.3",
     "electron": "^44.7.0",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.28.2",
@@ -58,6 +60,12 @@
       "resources/icon.png",
       "package.json",
       "!**/node_modules/**"
+    ],
+    "extraResources": [
+      {
+        "from": "build/git",
+        "to": "git"
+      }
     ],
     "mac": {
       "target": [

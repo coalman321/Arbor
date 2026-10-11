@@ -160,6 +160,16 @@ function SettingsMenu() {
               <div className="muted small-text">Label every connection in plain words (hover a label for more)</div>
             </span>
           </label>
+          <div className="menu-section">About</div>
+          <button
+            className="setting-link"
+            onClick={() => {
+              setOpen(false);
+              useStore.setState({ dialog: { kind: "licenses" } });
+            }}
+          >
+            Open-source licences…
+          </button>
         </div>
       )}
     </div>

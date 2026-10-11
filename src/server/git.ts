@@ -4,6 +4,7 @@
 
 import { execFile } from "node:child_process";
 import { posix } from "node:path";
+import { findGit, type GitBinary } from "./git_binary.ts";
 import { WORKTREE, type GitCommit, type GitInfo, type ProjectSnapshot, type RevSnapshot } from "../shared/model.ts";
 import { ProjectError, type Project, type ProjectSource } from "./project.ts";
 
@@ -11,9 +12,9 @@ const DEFAULT_COMMITS = 200;
 const MAX_COMMITS = 5000;
 const CACHE_SIZE = 16;
 
-function git(cwd: string, args: string[]): Promise<string> {
+function git(bin: GitBinary, cwd: string, args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
-    execFile("git", args, { cwd, maxBuffer: 64 * 1024 * 1024, encoding: "utf8" }, (err, stdout, stderr) => {
+    execFile(bin.path, args, { cwd, env: bin.env, maxBuffer: 64 * 1024 * 1024, encoding: "utf8" }, (err, stdout, stderr) => {
       if (err) reject(new Error(stderr.trim() || err.message));
       else resolve(stdout);
     });
@@ -24,19 +25,26 @@ export class GitRepo {
   /** Snapshots by commit id; a commit never changes, so these never go stale. */
   private cache = new Map<string, ProjectSnapshot>();
 
-  private constructor(private readonly project: Project) {}
+  private constructor(
+    private readonly project: Project,
+    private readonly bin: GitBinary,
+  ) {}
 
-  static async open(project: Project): Promise<GitRepo | null> {
+  /** The repository holding `project`, or why there isn't one. */
+  static async open(project: Project): Promise<GitRepo | string> {
+    const bin = await findGit();
+    if (!bin) return "Comparing needs git, which isn't installed (or isn't on the PATH)";
     try {
-      const inside = await git(project.root, ["rev-parse", "--is-inside-work-tree"]);
-      return inside.trim() === "true" ? new GitRepo(project) : null;
+      const inside = await git(bin, project.root, ["rev-parse", "--is-inside-work-tree"]);
+      if (inside.trim() === "true") return new GitRepo(project, bin);
     } catch {
-      return null;
+      // not a repository
     }
+    return "This project is not in a git repository";
   }
 
   private run(args: string[]) {
-    return git(this.project.root, args);
+    return git(this.bin, this.project.root, args);
   }
 
   /** Resolves a branch, tag, or commit expression to a commit id. */

@@ -57,7 +57,7 @@ export class Project {
   readonly root: string;
   /** Content hash of every file as last read or written by us, keyed by project-relative path. */
   private versions = new Map<string, string>();
-  private gitRepo?: Promise<GitRepo | null>;
+  private gitRepo?: Promise<GitRepo | string>;
   readonly disk: ProjectSource = {
     read: async (rel) => {
       const abs = this.resolvePath(rel);
@@ -70,8 +70,8 @@ export class Project {
     this.root = resolve(root);
   }
 
-  /** The git repository holding this project, or null if it isn't in one (or git isn't installed). */
-  git(): Promise<GitRepo | null> {
+  /** The git repository holding this project, or why there isn't one (not in a repository, no git). */
+  git(): Promise<GitRepo | string> {
     this.gitRepo ??= GitRepo.open(this);
     return this.gitRepo;
   }

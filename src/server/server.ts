@@ -9,7 +9,8 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import type { AddressInfo } from "node:net";
 import { extname, join, posix, relative, resolve, sep } from "node:path";
 import { WebSocketServer, type WebSocket } from "ws";
-import type { NodeModel, SaveFileRequest } from "../shared/model.ts";
+import type { AboutInfo, NodeModel, SaveFileRequest } from "../shared/model.ts";
+import { bundledGitInfo } from "./git_binary.ts";
 import { relayToRobot } from "./live_relay.ts";
 import { ProjectError, type Project } from "./project.ts";
 import type { Workspace } from "./workspace.ts";
@@ -83,6 +84,8 @@ export function startServer({ workspace, host, port, loadStatic, vite }: ServerO
       throw new ProjectError("The editor has switched to a different project in another window", 409);
     }
     switch (route) {
+      case "GET /api/about":
+        return sendJson(res, 200, { bundledGit: await bundledGitInfo() } satisfies AboutInfo);
       case "GET /api/workspace":
         return sendJson(res, 200, await workspace.info());
       case "GET /api/fs":
@@ -123,11 +126,11 @@ export function startServer({ workspace, host, port, loadStatic, vite }: ServerO
       case "GET /api/git/revs": {
         const repo = await proj().git();
         const limit = Number(url.searchParams.get("limit")) || undefined;
-        return sendJson(res, 200, repo ? await repo.info(limit) : { available: false, reason: "This project is not in a git repository" });
+        return sendJson(res, 200, typeof repo === "string" ? { available: false, reason: repo } : await repo.info(limit));
       }
       case "GET /api/git/snapshot": {
         const repo = await proj().git();
-        if (!repo) throw new ProjectError("This project is not in a git repository", 404);
+        if (typeof repo === "string") throw new ProjectError(repo, 404);
         return sendJson(res, 200, await repo.snapshot(url.searchParams.get("rev") ?? ""));
       }
       default:

@@ -2,7 +2,8 @@ import { execFileSync } from "node:child_process";
 import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
+import { findGit, useBundledGit } from "../src/server/git_binary.ts";
 import { Project, ProjectError } from "../src/server/project.ts";
 import { WORKTREE } from "../src/shared/model.ts";
 
@@ -33,7 +34,8 @@ describe("git snapshots", () => {
     git("tag", "v1");
     await writeFile(join(root, "trees", "extra.xml"), `<root BTCPP_format="4"><BehaviorTree ID="Extra"><AlwaysSuccess/></BehaviorTree></root>`);
 
-    const repo = (await p.git())!;
+    const repo = await p.git();
+    if (typeof repo === "string") throw new Error(repo);
     const info = await repo.info();
     expect(info).toMatchObject({ available: true, branch: "main", branches: ["main"], tags: ["v1"], dirty: true });
     if (!info.available) return;
@@ -55,7 +57,8 @@ describe("git snapshots", () => {
 
   it("refuses option-like and unknown revisions", async () => {
     const { root } = await repoWithProject();
-    const repo = (await new Project(root).git())!;
+    const repo = await new Project(root).git();
+    if (typeof repo === "string") throw new Error(repo);
     await expect(repo.snapshot("--output=/tmp/x")).rejects.toBeInstanceOf(ProjectError);
     await expect(repo.snapshot("HEAD~5")).rejects.toThrow(/Unknown revision/);
   });
@@ -63,6 +66,32 @@ describe("git snapshots", () => {
   it("reports projects outside a repository", async () => {
     const dir = await mkdtemp(join(tmpdir(), "bt-editor-nogit-"));
     await cp(DEMO, dir, { recursive: true });
-    expect(await new Project(dir).git()).toBeNull();
+    expect(await new Project(dir).git()).toBe("This project is not in a git repository");
+  });
+});
+
+describe("bundled git", () => {
+  const path = process.env.PATH;
+  afterEach(() => {
+    process.env.PATH = path;
+  });
+
+  it("is used when there's no git on the PATH", async () => {
+    const { root } = await repoWithProject();
+    process.env.PATH = await mkdtemp(join(tmpdir(), "bt-editor-nopath-"));
+    useBundledGit(join(import.meta.dirname, "..", "node_modules", "dugite", "git"));
+    expect(await findGit()).toMatchObject({ bundled: true });
+
+    const repo = await new Project(root).git();
+    if (typeof repo === "string") throw new Error(repo);
+    const info = await repo.info();
+    expect(info.available && info.commits.map((c) => c.subject)).toEqual(["first"]);
+  });
+
+  it("says so when there's no git at all", async () => {
+    const { root } = await repoWithProject();
+    process.env.PATH = await mkdtemp(join(tmpdir(), "bt-editor-nopath-"));
+    useBundledGit(join(tmpdir(), "no-such-git"));
+    expect(await new Project(root).git()).toMatch(/needs git/);
   });
 });

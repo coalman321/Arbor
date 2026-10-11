@@ -97,7 +97,8 @@ export type DialogState =
   | { kind: "newTree"; extractFrom?: { treeId: string; uid: string } }
   | { kind: "renameTree"; treeId: string }
   | { kind: "moveTree"; treeId: string }
-  | { kind: "nodeType"; modelId?: string; category?: NodeModel["category"] };
+  | { kind: "nodeType"; modelId?: string; category?: NodeModel["category"] }
+  | { kind: "licenses" };
 
 export interface ContextMenuState {
   x: number;
