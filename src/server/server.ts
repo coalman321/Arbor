@@ -9,7 +9,8 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import type { AddressInfo } from "node:net";
 import { extname, join, posix, relative, resolve, sep } from "node:path";
 import { WebSocketServer, type WebSocket } from "ws";
-import type { AboutInfo, NodeModel, SaveFileRequest } from "../shared/model.ts";
+import type { NodeModel } from "@coalman321/arborist";
+import type { AboutInfo, SaveFileRequest } from "../shared/model.ts";
 import { bundledGitInfo } from "./git_binary.ts";
 import { relayToRobot } from "./live_relay.ts";
 import { ProjectError, type Project } from "./project.ts";

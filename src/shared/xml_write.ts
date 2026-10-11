@@ -1,7 +1,7 @@
 // Serializes the editor model back to BehaviorTree.CPP v4 XML. Pure string building so the frontend
 // can render the same XML preview the backend writes to disk.
 
-import type { BTNode, NodeModel, PortModel, TreeDef } from "./model.ts";
+import type { BTNode, NodeModel, PortModel, TreeDef } from "@coalman321/arborist";
 
 const INDENT = "  ";
 

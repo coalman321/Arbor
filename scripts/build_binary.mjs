@@ -41,6 +41,8 @@ const server = await build({
   define: { "import.meta.url": "__import_meta_url" },
   // vite is only loaded for --dev; ws's native speedups are optional.
   external: ["vite", "bufferutil", "utf-8-validate"],
+  // Bundle the Arborist workspace package from its TypeScript sources (its "source" export condition).
+  conditions: ["source"],
   logLevel: "warning",
   metafile: true,
   absWorkingDir: root,

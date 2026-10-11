@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { BTNode, TreeDef } from "../src/shared/model.ts";
-import { conditionText, layoutTree } from "../src/web/layout.ts";
+import type { BTNode, TreeDef } from "../src/model.ts";
+import { conditionText, layoutTree } from "../src/layout.ts";
 
 const n = (uid: string, type: string, children: BTNode[] = [], attrs: Record<string, string> = {}): BTNode => ({ uid, type, attrs, children });
 const tree = (root: BTNode): TreeDef => ({ id: "T", file: "trees/t.xml", ports: [], attrs: {}, root });

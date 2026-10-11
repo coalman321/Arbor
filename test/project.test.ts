@@ -3,11 +3,15 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { Project, ProjectError } from "../src/server/project.ts";
-import { parseSpecFile, parseTreeFile } from "../src/server/xml_read.ts";
-import { mapRuntimeTree } from "../src/shared/live_mapping.ts";
-import type { TreeDef } from "../src/shared/model.ts";
-import type { RuntimeNode } from "../src/shared/protocol.ts";
-import { projectModels, validateProject } from "../src/shared/validate.ts";
+import {
+  mapRuntimeTree,
+  parseSpecFile,
+  parseTreeFile,
+  projectModels,
+  type RuntimeNode,
+  type TreeDef,
+} from "@coalman321/arborist";
+import { validateProject } from "../src/shared/validate.ts";
 import { serializeSpecFile, serializeTreeFile } from "../src/shared/xml_write.ts";
 
 const DEMO = join(import.meta.dirname, "..", "examples", "demo_project");

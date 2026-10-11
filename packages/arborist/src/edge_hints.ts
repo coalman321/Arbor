@@ -1,7 +1,7 @@
 // Plain-language descriptions of what each parent/child connection means, for people who don't
 // know behavior trees (yet). `label` goes on the edge, `help` is the hover text.
 
-import type { BTNode } from "../shared/model.ts";
+import type { BTNode } from "./model.ts";
 
 export interface EdgeHint {
   label: string;

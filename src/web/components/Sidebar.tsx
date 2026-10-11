@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { NODE_CATEGORIES, type NodeModel } from "../../shared/model.ts";
+import { iconFor, NODE_CATEGORIES, type NodeModel } from "@coalman321/arborist";
 import { addNode, nodeForPaletteId, selectedNode, canHaveMoreChildren } from "../actions.ts";
 import {
   deleteTree,
@@ -16,7 +16,6 @@ import {
 } from "../store.ts";
 import { useDismiss } from "../dismiss.ts";
 import { PALETTE_MIME } from "./Canvas.tsx";
-import { iconFor } from "./icons.ts";
 
 /** Drag data for a tree being dragged onto another file in the list (to move it there). */
 const TREE_MIME = "application/x-bt-tree";

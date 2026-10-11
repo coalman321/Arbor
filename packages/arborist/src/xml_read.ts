@@ -1,7 +1,7 @@
 // Parses BehaviorTree.CPP v4 XML (tree files and TreeNodesModel spec files) into the editor model.
 
 import { XMLParser } from "fast-xml-parser";
-import type { BTNode, NodeCategory, NodeModel, PortDirection, PortModel, TreeDef } from "../shared/model.ts";
+import type { BTNode, NodeCategory, NodeModel, PortDirection, PortModel, TreeDef } from "./model.ts";
 
 // preserveOrder keeps children (and attributes) in file order, which matters: child order is
 // execution order. Each element comes back as { [tagName]: children[], ":@"?: attrs }.

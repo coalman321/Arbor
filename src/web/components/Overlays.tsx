@@ -1,6 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { NODE_CATEGORIES, type AboutInfo, type BundledGitInfo, type LibraryLicense, type NodeCategory, type NodeModel, type PortDirection, type PortModel } from "../../shared/model.ts";
-import { allowedChildren } from "../../shared/validate.ts";
+import {
+  allowedChildren,
+  CONDITION_FIRST,
+  ICON_CHOICES,
+  iconFor,
+  NODE_CATEGORIES,
+  type NodeCategory,
+  type NodeModel,
+  type PortDirection,
+  type PortModel,
+} from "@coalman321/arborist";
+import type { AboutInfo, BundledGitInfo, LibraryLicense } from "../../shared/model.ts";
 import { api, libraryLicenses } from "../api.ts";
 import { useDismiss } from "../dismiss.ts";
 import {
@@ -30,9 +40,7 @@ import {
   useModels,
   useStore,
 } from "../store.ts";
-import { CONDITION_FIRST } from "../layout.ts";
 import { findIn } from "../tree_ops.ts";
-import { ICON_CHOICES, iconFor } from "./icons.ts";
 import { BrowseDialog } from "./ProjectUI.tsx";
 
 /** Keeps a popup at (x, y) inside the viewport. */

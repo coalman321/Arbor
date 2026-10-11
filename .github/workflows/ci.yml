@@ -1,6 +1,6 @@
 name: CI
 
-# Typechecks, tests, bundles the server and packages the desktop app on every platform the release ships.
+# Typechecks, tests, builds the Arborist library, bundles the server and packages the desktop app on every platform the release ships.
 on:
   push:
     branches: [main]
@@ -39,6 +39,8 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      # The Arborist library's publishable build (the app itself uses its sources).
+      - run: npm run build -w @coalman321/arborist
       - run: npm run bundle
       - run: npm run stage-git
 

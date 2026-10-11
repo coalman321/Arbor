@@ -6,8 +6,13 @@
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { WebSocketServer, type WebSocket } from "ws";
-import { LIVE_PROTOCOL, LIVE_PROTOCOL_VERSION, type ClientMessage, type RobotMessage } from "../shared/protocol.ts";
-import { projectModels } from "../shared/validate.ts";
+import {
+  LIVE_PROTOCOL,
+  LIVE_PROTOCOL_VERSION,
+  projectModels,
+  type ClientMessage,
+  type RobotMessage,
+} from "@coalman321/arborist";
 import { serializeTreeFile } from "../shared/xml_write.ts";
 import { Project } from "../server/project.ts";
 import { Simulator } from "./simulator.ts";

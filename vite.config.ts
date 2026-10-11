@@ -1,4 +1,4 @@
-import { defineConfig, type Plugin } from "vite";
+import { defaultClientConditions, defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { collectLicenses } from "./scripts/licenses.mjs";
 
@@ -19,6 +19,8 @@ function licenses(): Plugin {
 export default defineConfig({
   root: "src/web",
   plugins: [react(), licenses()],
+  // Use the Arborist workspace package's TypeScript sources directly (its "source" export condition).
+  resolve: { conditions: ["source", ...defaultClientConditions] },
   build: {
     outDir: "../../dist",
     emptyOutDir: true,

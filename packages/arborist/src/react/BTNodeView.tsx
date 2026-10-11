@@ -1,12 +1,11 @@
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import { memo, type MouseEvent, type ReactNode } from "react";
-import { isBlackboardRef, type BTNode } from "../../shared/model.ts";
-import { conditionText, type CondPart, type FoldedCondition, type LayoutItem } from "../layout.ts";
-import { openTree, select, statusClass, toggleExpanded, useStore, type StatusInfo } from "../store.ts";
 import { decoratorHint } from "../edge_hints.ts";
-import { showDiffTree, useDiffMark } from "../diff.ts";
-import type { Mark } from "../diff_view.ts";
-import { flavorOf, iconFor } from "./icons.ts";
+import { flavorOf, iconFor } from "../icons.ts";
+import { conditionText, type CondPart, type FoldedCondition, type LayoutItem } from "../layout.ts";
+import { isBlackboardRef, type BTNode } from "../model.ts";
+import { nodeStatus, statusClass, type StatusInfo } from "../status.ts";
+import { useMark, useNodeClass, useViewer, type NodeMark, type ViewerContextValue } from "./context.ts";
 
 export interface BTNodeData extends Record<string, unknown> {
   item: LayoutItem;
@@ -23,8 +22,8 @@ export interface BTNodeData extends Record<string, unknown> {
 
 export type BTFlowNode = Node<BTNodeData, "bt" | "frame" | "window">;
 
-export function useNodeStatus(item: LayoutItem, liveMain: boolean): StatusInfo | undefined {
-  return useStore((s) => (liveMain ? s.live.statusByPath[item.path] : s.live.statusByDef[`${item.treeId}:${item.node.uid}`]));
+function useNodeStatus(ctx: ViewerContextValue, item: LayoutItem, liveMain: boolean): StatusInfo | undefined {
+  return ctx.useStatuses((s) => nodeStatus(s, item.path, item.treeId, item.node.uid, liveMain));
 }
 
 const BRANCH_PLACEHOLDER: Record<string, string> = { IfThenElse: "if", WhileDoElse: "while" };
@@ -41,20 +40,20 @@ interface CondContext {
 
 /** One clickable piece of a folded condition, standing for the node at `path`. */
 function CondToken({ path, node, ctx, className, children }: { path: string; node: BTNode; ctx: CondContext; className: string; children: ReactNode }) {
-  const status = useStore((s) => (ctx.liveMain ? s.live.statusByPath[path] : s.live.statusByDef[`${ctx.treeId}:${node.uid}`]));
-  const selected = useStore((s) => (s.diff ? s.diff.selection : s.selection) === path);
-  const mark = useDiffMark(ctx.treeId, node.uid);
+  const viewer = useViewer();
+  const status = viewer.useStatuses((s) => nodeStatus(s, path, ctx.treeId, node.uid, ctx.liveMain));
+  const selected = viewer.useSelected(path);
+  const mark = useMark(viewer, ctx.treeId, node.uid);
   const problems = ctx.problems[node.uid];
-  const cls = ["cond-token", "nodrag", className, statusClass(status), diffClass(mark), selected ? "selected" : "", problems ? "has-problem" : ""].join(" ");
+  const cls = ["cond-token", "nodrag", className, statusClass(status), mark?.className ?? "", selected ? "selected" : "", problems ? "has-problem" : ""].join(" ");
   const onClick = (e: MouseEvent) => {
     e.stopPropagation();
-    select(path);
+    viewer.select(path);
   };
   const onContextMenu = (e: MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (useStore.getState().diff) return; // nothing to edit in compare mode
-    useStore.setState({ selection: path, menu: { x: e.clientX, y: e.clientY, path }, picker: null });
+    viewer.onContextMenu?.(e, path);
   };
   return (
     <span className={cls} onClick={onClick} onContextMenu={onContextMenu} title={[node.type, ...(problems ?? [])].join("\n")}>
@@ -125,38 +124,15 @@ function ConditionRow({ condition, ctx }: { condition: FoldedCondition; ctx: Con
   );
 }
 
-/** CSS classes for a node's change in compare mode. */
-function diffClass(mark: Mark | undefined): string {
-  if (!mark) return "";
-  return [mark.kind === "same" ? "" : `diff-${mark.kind}`, mark.edited ? "diff-edited" : "", mark.innerChange ? "diff-inner" : ""].join(" ");
-}
-
-/** What happened to a node, as the short tag on its corner. */
-function diffTag(mark: Mark): string | null {
-  switch (mark.kind) {
-    case "added":
-      return "added";
-    case "removed":
-      return "removed";
-    case "moved-away":
-      return "moved away";
-    case "moved":
-      return mark.reordered ? "reordered" : "moved";
-    case "changed":
-      return "edited";
-  }
-  return mark.nesting ?? (mark.innerChange ? "contents changed" : null);
-}
-
-function DiffTag({ mark }: { mark: Mark }) {
-  const text = diffTag(mark);
-  return text ? <span className="bt-node-diff">{text + (mark.kind === "moved" && mark.edited ? " · edited" : "")}</span> : null;
+function MarkTag({ mark }: { mark: NodeMark }) {
+  return mark.tag ? <span className="bt-node-diff">{mark.tag}</span> : null;
 }
 
 const shown = (v: string) => (v === "" ? '""' : v);
 
 /** A node's content: header, name, condition, ports. Shared by plain nodes and frame headers. */
-function NodeBody({ data, status, mark }: { data: BTNodeData; status: StatusInfo | undefined; mark?: Mark }) {
+function NodeBody({ data, status, mark }: { data: BTNodeData; status: StatusInfo | undefined; mark?: NodeMark }) {
+  const viewer = useViewer();
   const { item, category, icon, problems, foldedProblems, liveMain } = data;
   const { node } = item;
   const name = node.attrs.name && node.attrs.name !== title(node) ? node.attrs.name : null;
@@ -181,7 +157,7 @@ function NodeBody({ data, status, mark }: { data: BTNodeData; status: StatusInfo
         </div>
       )}
       {item.condition && <ConditionRow condition={item.condition} ctx={{ treeId: item.treeId, liveMain, problems: foldedProblems }} />}
-      {!item.condition && item.node.type in BRANCH_PLACEHOLDER && (
+      {!item.condition && viewer.editable && item.node.type in BRANCH_PLACEHOLDER && (
         <div className="bt-node-cond empty">
           <span className="cond-keyword">{BRANCH_PLACEHOLDER[item.node.type]}</span>
           <span className="muted">drop a condition here</span>
@@ -205,35 +181,36 @@ function NodeBody({ data, status, mark }: { data: BTNodeData; status: StatusInfo
           title={item.expanded ? "Collapse subtree" : "Show subtree inline"}
           onClick={(e) => {
             e.stopPropagation();
-            toggleExpanded(item.path);
+            viewer.toggleExpanded(item.path);
           }}
         >
           {item.expanded ? "−" : "+"}
         </button>
       )}
       {status && (status.status !== "IDLE" || status.done) && <span className="bt-node-status">{status.done ? status.last : status.status}</span>}
-      {mark && <DiffTag mark={mark} />}
+      {mark && <MarkTag mark={mark} />}
     </>
   );
 }
 
-function useNodeClasses(data: BTNodeData, selected: boolean, status: StatusInfo | undefined, mark: Mark | undefined, base: string): string {
-  const hint = useStore((s) => (s.dropHint?.path === data.item.path ? s.dropHint.zone : null));
+function useNodeClasses(data: BTNodeData, selected: boolean, status: StatusInfo | undefined, mark: NodeMark | undefined, base: string): string {
+  const extra = useNodeClass(useViewer(), data.item.path);
   return [
     base,
     `cat-${data.category.toLowerCase()}`,
     selected ? "selected" : "",
     data.item.readOnly ? "readonly" : "",
     statusClass(status),
-    diffClass(mark),
-    hint ? `drop-${hint}` : "",
+    mark?.className ?? "",
+    extra ?? "",
   ].join(" ");
 }
 
 function BTNodeViewImpl({ data, selected }: NodeProps<BTFlowNode>) {
   const { item, problems, dir, liveMain } = data;
-  const status = useNodeStatus(item, liveMain);
-  const mark = useDiffMark(item.treeId, item.node.uid);
+  const viewer = useViewer();
+  const status = useNodeStatus(viewer, item, liveMain);
+  const mark = useMark(viewer, item.treeId, item.node.uid);
   const cls = useNodeClasses(data, selected, status, mark, "bt-node");
   return (
     <div className={cls} style={{ width: item.w }} title={problems.map((p) => p.message).join("\n") || undefined}>
@@ -252,8 +229,9 @@ export const BTNodeView = memo(BTNodeViewImpl);
  */
 function FrameViewImpl({ data, selected }: NodeProps<BTFlowNode>) {
   const { item, problems, dir, liveMain } = data;
-  const status = useNodeStatus(item, liveMain);
-  const mark = useDiffMark(item.treeId, item.node.uid);
+  const viewer = useViewer();
+  const status = useNodeStatus(viewer, item, liveMain);
+  const mark = useMark(viewer, item.treeId, item.node.uid);
   const cls = useNodeClasses(data, selected, status, mark, `bt-frame ${dir === "LR" ? "lr" : "tb"}`);
   const header = dir === "TB" ? { height: item.frame!.headerH } : { width: item.frame!.headerW };
   return (
@@ -271,12 +249,12 @@ export const FrameView = memo(FrameViewImpl);
 
 /**
  * The locked frame around an expanded SubTree's nodes: they belong to another tree (and file), so
- * they can't be edited here. The header names that tree and opens it.
+ * they can't be edited here. The header names that tree (and can open it: windowAction).
  */
 function WindowViewImpl({ data }: NodeProps<BTFlowNode>) {
   const { item, dir } = data;
   const win = item.window!;
-  const comparing = useStore((s) => !!s.diff);
+  const action = useViewer().windowAction;
   const header = dir === "TB" ? { height: item.frame!.headerH } : { width: item.frame!.headerW };
   return (
     <div className={`bt-window ${dir === "LR" ? "lr" : "tb"}`} style={{ width: item.w, height: item.h }}>
@@ -284,7 +262,7 @@ function WindowViewImpl({ data }: NodeProps<BTFlowNode>) {
       <div
         className="bt-window-header"
         style={header}
-        title={`These steps belong to the tree "${win.treeId}" (${win.file}). Open it to change them.`}
+        title={action?.title?.(win.treeId, win.file) ?? `These steps belong to the tree "${win.treeId}" (${win.file}).`}
       >
         <span className="bt-window-lock" aria-hidden>
           🔒
@@ -292,16 +270,17 @@ function WindowViewImpl({ data }: NodeProps<BTFlowNode>) {
         <span className="bt-window-title">
           <strong>{win.treeId}</strong> <span className="muted">· from {win.file.split("/").pop()}</span>
         </span>
-        <button
-          className="small nodrag"
-          onClick={(e) => {
-            e.stopPropagation();
-            if (comparing) showDiffTree(win.treeId);
-            else openTree(win.treeId);
-          }}
-        >
-          {comparing ? "Show this tree" : "Open to edit"}
-        </button>
+        {action && (
+          <button
+            className="small nodrag"
+            onClick={(e) => {
+              e.stopPropagation();
+              action.run(win.treeId);
+            }}
+          >
+            {action.label}
+          </button>
+        )}
       </div>
       <Handle type="source" position={dir === "TB" ? Position.Bottom : Position.Right} isConnectable={false} />
     </div>

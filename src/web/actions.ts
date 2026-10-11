@@ -1,8 +1,7 @@
 // Editing commands on the active tab's selection. Shared by keyboard shortcuts, the context menu,
 // the node picker and the inspector.
 
-import type { BTNode, NodeModel } from "../shared/model.ts";
-import { allowedChildren, modelFor, projectModels } from "../shared/validate.ts";
+import { allowedChildren, modelFor, projectModels, type BTNode, type NodeModel } from "@coalman321/arborist";
 import { createTree, editRoot, fileNameFor, openTree, resolvePath, toast, useStore } from "./store.ts";
 import {
   cloneWithNewUids,

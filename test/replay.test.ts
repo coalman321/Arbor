@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { parseBtlog, writeBtlog } from "../src/shared/btlog.ts";
 import { seek, startReplay } from "../src/web/replay.ts";
-import { statusClass, useStore } from "../src/web/store.ts";
+import { statusClass } from "@coalman321/arborist";
+import { useStore } from "../src/web/store.ts";
 
 const XML = `<root BTCPP_format="4"><BehaviorTree ID="T" _fullpath=""><Sequence name="s" _uid="1"><AlwaysSuccess name="a" _uid="2"/><Wait name="w" _uid="3"/></Sequence></BehaviorTree></root>`;
 

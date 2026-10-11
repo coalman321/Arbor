@@ -3,9 +3,8 @@
   <include path="lib/common.xml"/>
   <BehaviorTree ID="CitrusSynergy">
     <Sequence>
+      <SubTree ID="Turtle"/>
       <SetShooterTarget target="HUB"/>
-      <SetShooterState state="IDLE"/>
-      <SetIntakeState state="STORE"/>
       <Sleep name="Settle" msec="1000"/>
       <Fallback>
         <ParallelDeadline name="DriveP1">

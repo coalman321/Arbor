@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { TreeDef } from "../src/shared/model.ts";
+import type { TreeDef } from "@coalman321/arborist";
 import { moveTreeToFile, undo, useStore, type FileState } from "../src/web/store.ts";
 
 const tree = (id: string, file: string): TreeDef => ({ id, file, ports: [], attrs: {}, root: { uid: "n1", type: "AlwaysSuccess", attrs: {}, children: [] } });

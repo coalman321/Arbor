@@ -12,7 +12,6 @@
     <Sequence>
       <SetShooterState state="IDLE"/>
       <SetIntakeState state="STORE"/>
-      <Sleep msec="1000"/>
     </Sequence>
   </BehaviorTree>
   <BehaviorTree ID="IntakeOnEvent">

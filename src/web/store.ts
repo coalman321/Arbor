@@ -1,17 +1,19 @@
 import { useMemo } from "react";
 import { create } from "zustand";
-import type { Mapping } from "../shared/live_mapping.ts";
-import type {
-  BTNode,
-  Diagnostic,
-  NodeModel,
-  ProjectManifest,
-  ProjectSnapshot,
-  TreeDef,
-  TreeFile,
-} from "../shared/model.ts";
-import type { BlackboardMsg, NodeStatus, RuntimeNode } from "../shared/protocol.ts";
-import { projectModels, validateProject } from "../shared/validate.ts";
+import {
+  projectModels,
+  type BlackboardMsg,
+  type BTNode,
+  type Diagnostic,
+  type Mapping,
+  type NodeModel,
+  type NodeStatus,
+  type RuntimeNode,
+  type Statuses,
+  type TreeDef,
+} from "@coalman321/arborist";
+import type { ProjectManifest, ProjectSnapshot, TreeFile } from "../shared/model.ts";
+import { validateProject } from "../shared/validate.ts";
 import { api, ApiError, setProjectRoot } from "./api.ts";
 import type { DropZone } from "./tree_ops.ts";
 
@@ -30,28 +32,6 @@ interface History {
   lastTime?: number;
 }
 
-export interface StatusInfo {
-  status: NodeStatus;
-  /** Most recent non-IDLE status, shown faded after BT.CPP resets the node to IDLE. */
-  last: NodeStatus;
-  t: number;
-  /**
-   * IDLE, but `last` is a result (SUCCESS/FAILURE/SKIPPED) from the tree's current run. BT.CPP resets
-   * every node to IDLE as soon as the whole tree finishes; these keep showing that run's results
-   * until the next run starts, rather than the whole tree fading at once.
-   */
-  done?: boolean;
-}
-
-export const FINISHED: ReadonlySet<NodeStatus> = new Set(["SUCCESS", "FAILURE", "SKIPPED"]);
-
-/** CSS class for a node's live status: "is-*" for what it's doing (or just did), "was-*" for older results. */
-export function statusClass(info: StatusInfo | undefined): string {
-  if (!info) return "";
-  if (info.status !== "IDLE") return `is-${info.status.toLowerCase()}`;
-  return `${info.done ? "is" : "was"}-${info.last.toLowerCase()}`;
-}
-
 export interface LogEntry {
   t: number;
   uid: number;
@@ -59,7 +39,8 @@ export interface LogEntry {
   status: NodeStatus;
 }
 
-export interface LiveState {
+/** Statuses (see Statuses) plus the connection they come from. */
+export interface LiveState extends Statuses {
   url: string;
   /** "replay": statuses come from a .btlog being played back (see replay.ts), not a robot. */
   state: "idle" | "connecting" | "connected" | "disconnected" | "error" | "replay";
@@ -70,14 +51,7 @@ export interface LiveState {
   runtime?: RuntimeNode[];
   robotXml?: string;
   mapping?: Mapping;
-  statusByUid: Record<number, StatusInfo>;
-  /** Keyed by instance path within the robot's main tree. */
-  statusByPath: Record<string, StatusInfo>;
-  /** Keyed by "<treeId>:<nodeUid>": the latest status of any instance of that node. */
-  statusByDef: Record<string, StatusInfo>;
   log: LogEntry[];
-  /** When the robot's root last started running, for StatusInfo.done. */
-  runStart?: number;
   blackboard?: BlackboardMsg;
   paused: boolean;
 }

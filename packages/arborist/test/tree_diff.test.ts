@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { parseTreeFile } from "../src/server/xml_read.ts";
-import { findNode, type BTNode, type TreeDef } from "../src/shared/model.ts";
-import { diffTreeDefs, diffTrees, isChanged, type TreeDiff } from "../src/shared/tree_diff.ts";
+import { findNode, type BTNode, type TreeDef } from "../src/model.ts";
+import { diffTreeDefs, diffTrees, isChanged, type TreeDiff } from "../src/tree_diff.ts";
+import { parseTreeFile } from "../src/xml_read.ts";
 
 const trees = (body: string, file = "t.xml"): TreeDef[] => parseTreeFile(`<root BTCPP_format="4">${body}</root>`, file).trees;
 const root = (body: string): BTNode => trees(`<BehaviorTree ID="T">${body}</BehaviorTree>`)[0].root!;

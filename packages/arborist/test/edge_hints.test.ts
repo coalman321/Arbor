@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { BTNode } from "../src/shared/model.ts";
-import { decoratorHint, edgeHint } from "../src/web/edge_hints.ts";
+import type { BTNode } from "../src/model.ts";
+import { decoratorHint, edgeHint } from "../src/edge_hints.ts";
 
 const n = (type: string, attrs: Record<string, string> = {}, children = 0): BTNode => ({
   uid: type,

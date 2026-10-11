@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { BTNode } from "../src/shared/model.ts";
+import type { BTNode } from "@coalman321/arborist";
 import { insertAt, moveNode, removeNode, reorder, unwrapNode, wrapNode } from "../src/web/tree_ops.ts";
 
 const n = (uid: string, children: BTNode[] = [], type = "Sequence"): BTNode => ({ uid, type, attrs: {}, children });
