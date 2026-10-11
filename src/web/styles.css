@@ -657,7 +657,6 @@ hr {
 .canvas .react-flow {
   --xy-background-pattern-color: var(--grid);
   --xy-edge-stroke: var(--muted);
-  --xy-minimap-background-color: var(--panel);
   --xy-controls-button-background-color: var(--panel);
   --xy-controls-button-color: var(--text);
   --xy-controls-button-border-color: var(--border);
@@ -993,11 +992,6 @@ input.bb {
   opacity: 0;
   pointer-events: none;
 }
-.minimap-window {
-  fill: color-mix(in srgb, var(--cat-subtree) 10%, transparent);
-  stroke: var(--cat-subtree);
-  stroke-width: 2;
-}
 /* Trying to change something that is locked */
 .canvas.drag-blocked,
 .canvas.drag-blocked * {
@@ -1077,11 +1071,6 @@ input.bb {
 .bt-frame.drop-inside .bt-frame-header {
   outline: 2px dashed var(--accent);
   outline-offset: 2px;
-}
-.minimap-frame {
-  fill: transparent;
-  stroke: var(--cat-decorator);
-  stroke-width: 2;
 }
 button.on {
   border-color: var(--accent);
@@ -1179,23 +1168,6 @@ button.on {
   left: 0;
   right: 0;
   height: 4px;
-}
-
-.minimap-control {
-  fill: var(--cat-control);
-}
-.minimap-decorator {
-  fill: var(--cat-decorator);
-}
-.minimap-action {
-  fill: var(--cat-action);
-}
-.minimap-condition {
-  fill: var(--cat-condition);
-}
-.minimap-subtree,
-.minimap-unknown {
-  fill: var(--cat-subtree);
 }
 
 /* ---------- inspector ---------- */
