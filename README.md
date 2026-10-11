@@ -65,6 +65,8 @@ To build for the other CPU architecture, pass it through to electron-builder, fo
 
 The packaging settings (app ID, targets, icons from `resources/`) are in the `build` field of [package.json](package.json).
 
+To publish a new version, follow [docs/releasing.md](docs/releasing.md).
+
 ## Projects
 
 ```
