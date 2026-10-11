@@ -1,4 +1,4 @@
-# Arbor
+# <img src="docs/logo.svg" alt="Arbor" height="72">
 
 A local editor and live viewer for [BehaviorTree.CPP](https://www.behaviortree.dev/) v4 trees. It runs as a small Node.js backend that serves a browser UI and reads and writes a **project directory** of plain BT.CPP XML. It can also attach to a running robot and show the tree executing, node by node.
 

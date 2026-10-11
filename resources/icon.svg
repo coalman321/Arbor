@@ -1,12 +1,8 @@
 <!-- Source of the desktop app icon (icon.png, which electron-builder converts per platform). The mark
-     matches src/web/arbor.svg, on Apple's 1024px icon grid: an 824px rounded square, 100px margin.
-     Regenerate icon.png from this file after editing it. -->
+     matches src/web/arbor.svg, drawn on a transparent background and filling Apple's 1024px icon grid
+     (100px margin). Regenerate icon.png from this file after editing it. -->
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#3b82f6"/>
-      <stop offset="1" stop-color="#1d4ed8"/>
-    </linearGradient>
     <filter id="shadow" x="-10%" y="-10%" width="120%" height="125%">
       <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#000000" flood-opacity="0.3"/>
     </filter>
@@ -35,9 +31,9 @@
       <path d="M0.5 0.1 1.6 1.2" stroke="#8a5a2c" stroke-width="0.2" stroke-linecap="round"/>
     </g>
   </defs>
-  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)" filter="url(#shadow)"/>
-  <!-- 32-unit mark, scaled to the square and nudged down to center it optically -->
-  <g transform="translate(100 123) scale(25.75)">
+  <!-- 32-unit mark, scaled so its logs fill the grid -->
+  <g filter="url(#shadow)">
+    <g transform="translate(-128 -108) scale(40)">
       <!-- Upright logs: the root's stem and the three drops, tucked behind the crossbar and log ends -->
       <g fill="url(#logV)" stroke="#3a200c" stroke-width="0.35">
         <rect x="14.6" y="9" width="2.8" height="5.5"/>
@@ -57,5 +53,6 @@
       <use href="#logEnd" transform="translate(9 21.5)"/>
       <use href="#logEnd" transform="translate(16 21.5) rotate(120)"/>
       <use href="#logEnd" transform="translate(23 21.5) rotate(240)"/>
+    </g>
   </g>
 </svg>
