@@ -32,6 +32,8 @@ async function start() {
     height: 900,
     title: "Arbor",
     autoHideMenuBar: true,
+    // Linux takes the taskbar icon from the window; macOS and Windows use the packaged app's.
+    icon: join(app.getAppPath(), "resources", "icon.png"),
     webPreferences: { contextIsolation: true, sandbox: true },
   });
   // Links to other sites open in the system browser. Dropping a file the UI doesn't handle would

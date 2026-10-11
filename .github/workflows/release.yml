@@ -47,10 +47,8 @@ jobs:
           name: arbor-${{ matrix.target }}
           path: |
             release/*.dmg
-            release/*.zip
             release/*.exe
             release/*.AppImage
-            release/*.tar.gz
           if-no-files-found: error
 
   release:
