@@ -4,7 +4,6 @@ import {
   EdgeLabelRenderer,
   Controls,
   getSmoothStepPath,
-  MiniMap,
   ReactFlow,
   useReactFlow,
   type Edge,
@@ -177,6 +176,7 @@ export function Canvas() {
         data: {
           item,
           category: categoryOf(item.node, models),
+          icon: modelFor(item.node, models)?.metadata?.icon,
           problems: own,
           foldedProblems,
           dir,
@@ -366,11 +366,6 @@ export function Canvas() {
       >
         <Background gap={24} size={1} />
         <Controls showInteractive={false} />
-        <MiniMap
-          pannable
-          zoomable
-          nodeClassName={(n) => (n.type === "window" ? "minimap-window" : n.type === "frame" ? "minimap-frame" : `minimap-${(n.data as BTFlowNode["data"]).category.toLowerCase()}`)}
-        />
       </ReactFlow>
       {!tree.root && (
         <div className="canvas-hint">

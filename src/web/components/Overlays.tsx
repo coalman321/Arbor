@@ -30,7 +30,7 @@ import {
 } from "../store.ts";
 import { CONDITION_FIRST } from "../layout.ts";
 import { findIn } from "../tree_ops.ts";
-import { iconFor } from "./icons.ts";
+import { ICON_CHOICES, iconFor } from "./icons.ts";
 import { BrowseDialog } from "./ProjectUI.tsx";
 
 function useDismiss(ref: React.RefObject<HTMLElement | null>, onClose: () => void) {
@@ -229,7 +229,7 @@ export function NodePicker() {
             onMouseEnter={() => setIndex(i)}
             onClick={() => choose(m)}
           >
-            <span className="palette-icon">{iconFor(m.id, m.category)}</span>
+            <span className="palette-icon">{iconFor(m.id, m.category, m.metadata?.icon)}</span>
             <span className="picker-id">{m.id}</span>
             <span className="muted small-text">{m.category}</span>
           </button>
@@ -423,6 +423,7 @@ function NodeTypeDialog({ modelId, close }: { modelId?: string; close: () => voi
   const [id, setId] = useState(original?.id ?? "");
   const [category, setCategory] = useState<NodeCategory>(original?.category ?? "Action");
   const [description, setDescription] = useState(original?.description ?? "");
+  const [icon, setIcon] = useState(original?.metadata?.icon ?? "");
   const [ports, setPorts] = useState<PortModel[]>(original?.ports ?? []);
   const [error, setError] = useState<string | null>(null);
 
@@ -432,7 +433,12 @@ function NodeTypeDialog({ modelId, close }: { modelId?: string; close: () => voi
     const names = ports.map((p) => p.name);
     if (names.some((n) => !/^[A-Za-z_][A-Za-z0-9_]*$/.test(n))) return setError("Port names must be identifiers");
     if (new Set(names).size !== names.length) return setError("Port names must be unique");
-    const model: NodeModel = { id, category, ports, source: "spec", ...(description ? { description } : {}), ...(original?.metadata ? { metadata: original.metadata } : {}) };
+    const glyph = icon.trim();
+    // The icon is kept with any other <MetaFields> the spec already has for this type.
+    const meta = { ...original?.metadata };
+    delete meta.icon;
+    const metadata = glyph ? { ...meta, icon: glyph } : meta;
+    const model: NodeModel = { id, category, ports, source: "spec", ...(description ? { description } : {}), ...(Object.keys(metadata).length ? { metadata } : {}) };
     if (await saveSpecModel(model, modelId)) close();
   };
   const setPort = (i: number, patch: Partial<PortModel>) => setPorts(ports.map((p, j) => (j === i ? { ...p, ...patch } : p)));
@@ -463,10 +469,16 @@ function NodeTypeDialog({ modelId, close }: { modelId?: string; close: () => voi
           </select>
         </label>
       </div>
-      <label className="field">
-        <span className="field-label">Description</span>
-        <input value={description} onChange={(e) => setDescription(e.target.value)} />
-      </label>
+      <div className="row">
+        <label className="field grow">
+          <span className="field-label">Description</span>
+          <input value={description} onChange={(e) => setDescription(e.target.value)} />
+        </label>
+        <div className="field">
+          <span className="field-label">Icon</span>
+          <IconPicker value={icon} fallback={iconFor(id, category)} onChange={setIcon} />
+        </div>
+      </div>
       <h4 className="section-title">Ports</h4>
       <table className="ports-table">
         <thead>
@@ -535,6 +547,83 @@ function NodeTypeDialog({ modelId, close }: { modelId?: string; close: () => voi
         </button>
       </div>
     </form>
+  );
+}
+
+const PICKER_WIDTH = 290;
+const PICKER_HEIGHT = 340;
+
+/** A button showing the chosen icon that opens a grid of icons to choose from. */
+function IconPicker({ value, fallback, onChange }: { value: string; fallback: string; onChange: (icon: string) => void }) {
+  // Where the grid goes, fixed to the window so the dialog's scrolling doesn't clip it; null when closed.
+  const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const open = pos !== null;
+  const ref = useRef<HTMLDivElement>(null);
+  const toggle = (button: HTMLElement) => {
+    if (open) return setPos(null);
+    const r = button.getBoundingClientRect();
+    const below = r.bottom + 4 + PICKER_HEIGHT <= window.innerHeight;
+    setPos({ top: below ? r.bottom + 4 : Math.max(8, r.top - 4 - PICKER_HEIGHT), left: Math.max(8, r.right - PICKER_WIDTH) });
+  };
+  useEffect(() => {
+    if (!open) return;
+    const down = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setPos(null);
+    window.addEventListener("mousedown", down);
+    return () => window.removeEventListener("mousedown", down);
+  }, [open]);
+  const choose = (icon: string) => {
+    onChange(icon);
+    setPos(null);
+  };
+  return (
+    <div
+      className="icon-picker"
+      ref={ref}
+      onKeyDown={(e) => {
+        // Escape closes just the grid, not the dialog around it.
+        if (open && e.key === "Escape") {
+          e.stopPropagation();
+          setPos(null);
+        }
+      }}
+    >
+      <button
+        type="button"
+        className={`icon-picker-button ${value ? "" : "muted"}`}
+        onClick={(e) => toggle(e.currentTarget)}
+        title={value ? "Change the icon" : "Using the category's icon; click to choose one"}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+      >
+        {value || fallback}
+      </button>
+      {open && (
+        <div className="popover icon-picker-popover" style={{ ...pos, width: PICKER_WIDTH, maxHeight: PICKER_HEIGHT }} role="dialog" aria-label="Choose an icon">
+          <button type="button" className={`icon-picker-default ${value ? "" : "selected"}`} onClick={() => choose("")}>
+            <span className="muted">{fallback}</span> Category default
+          </button>
+          {ICON_CHOICES.map(({ group, icons }) => (
+            <div key={group}>
+              <div className="icon-picker-group">{group}</div>
+              <div className="icon-picker-grid">
+                {icons.map(([icon, name]) => (
+                  <button
+                    type="button"
+                    key={icon}
+                    className={`icon-picker-choice ${icon === value ? "selected" : ""}`}
+                    onClick={() => choose(icon)}
+                    title={name}
+                    aria-label={name}
+                  >
+                    {icon}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

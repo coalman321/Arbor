@@ -9,6 +9,8 @@ import { flavorOf, iconFor } from "./icons.ts";
 export interface BTNodeData extends Record<string, unknown> {
   item: LayoutItem;
   category: string;
+  /** The node type's custom icon, if its spec sets one. */
+  icon?: string;
   problems: { severity: string; message: string }[];
   /** Problems of nodes drawn inside this one (its condition), by node uid. */
   foldedProblems: Record<string, string[]>;
@@ -121,7 +123,7 @@ function ConditionRow({ condition, ctx }: { condition: FoldedCondition; ctx: Con
 
 /** A node's content: header, name, condition, ports. Shared by plain nodes and frame headers. */
 function NodeBody({ data, status }: { data: BTNodeData; status: StatusInfo | undefined }) {
-  const { item, category, problems, foldedProblems, liveMain } = data;
+  const { item, category, icon, problems, foldedProblems, liveMain } = data;
   const { node } = item;
   const name = node.attrs.name && node.attrs.name !== title(node) ? node.attrs.name : null;
   const errors = problems.filter((p) => p.severity === "error").length;
@@ -131,7 +133,7 @@ function NodeBody({ data, status }: { data: BTNodeData; status: StatusInfo | und
     <>
       <div className="bt-node-header">
         <span className="bt-node-icon" aria-hidden>
-          {iconFor(node.type, category)}
+          {iconFor(node.type, category, icon)}
         </span>
         <span className="bt-node-title">{title(node)}</span>
         {flavor && <span className="bt-node-flavor">{flavor}</span>}

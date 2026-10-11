@@ -17,7 +17,9 @@
   </BehaviorTree>
   <BehaviorTree ID="IntakeOnEvent">
     <Sequence>
-      <WaitForChoreoEvent event="{event}"/>
+      <RetryUntilSuccessful num_attempts="-1">
+        <HasChoreoEventPassed event="{event}"/>
+      </RetryUntilSuccessful>
       <SetIntakeState state="{state}"/>
     </Sequence>
   </BehaviorTree>

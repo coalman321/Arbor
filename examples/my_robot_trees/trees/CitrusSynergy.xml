@@ -7,10 +7,13 @@
       <SetShooterState state="IDLE"/>
       <SetIntakeState state="STORE"/>
       <Sleep name="Settle" msec="1000"/>
-      <ParallelDeadline name="DriveP1">
+      <Fallback>
+        <ParallelDeadline name="DriveP1">
+          <FollowTrajectory trajectory="SynergyP1" end_state="IDLE"/>
+          <SubTree ID="IntakeOnEvent" event="Intake Out" state="INTAKE"/>
+        </ParallelDeadline>
         <FollowTrajectory trajectory="SynergyP1" end_state="IDLE"/>
-        <SubTree ID="IntakeOnEvent" event="Intake Out" state="INTAKE"/>
-      </ParallelDeadline>
+      </Fallback>
       <Delay name="MiddleWait" delay_msec="{middle_wait_msec}">
         <FollowTrajectory trajectory="SynergyP2" end_state="IDLE"/>
       </Delay>

@@ -428,7 +428,7 @@ hr {
 /* ---------- sidebar ---------- */
 
 .sidebar {
-  width: 250px;
+  width: var(--sidebar-width, 250px);
   flex: none;
   display: flex;
   flex-direction: column;
@@ -657,7 +657,6 @@ hr {
 .canvas .react-flow {
   --xy-background-pattern-color: var(--grid);
   --xy-edge-stroke: var(--muted);
-  --xy-minimap-background-color: var(--panel);
   --xy-controls-button-background-color: var(--panel);
   --xy-controls-button-color: var(--text);
   --xy-controls-button-border-color: var(--border);
@@ -993,11 +992,6 @@ input.bb {
   opacity: 0;
   pointer-events: none;
 }
-.minimap-window {
-  fill: color-mix(in srgb, var(--cat-subtree) 10%, transparent);
-  stroke: var(--cat-subtree);
-  stroke-width: 2;
-}
 /* Trying to change something that is locked */
 .canvas.drag-blocked,
 .canvas.drag-blocked * {
@@ -1077,11 +1071,6 @@ input.bb {
 .bt-frame.drop-inside .bt-frame-header {
   outline: 2px dashed var(--accent);
   outline-offset: 2px;
-}
-.minimap-frame {
-  fill: transparent;
-  stroke: var(--cat-decorator);
-  stroke-width: 2;
 }
 button.on {
   border-color: var(--accent);
@@ -1181,27 +1170,10 @@ button.on {
   height: 4px;
 }
 
-.minimap-control {
-  fill: var(--cat-control);
-}
-.minimap-decorator {
-  fill: var(--cat-decorator);
-}
-.minimap-action {
-  fill: var(--cat-action);
-}
-.minimap-condition {
-  fill: var(--cat-condition);
-}
-.minimap-subtree,
-.minimap-unknown {
-  fill: var(--cat-subtree);
-}
-
 /* ---------- inspector ---------- */
 
 .inspector {
-  width: 330px;
+  width: var(--inspector-width, 330px);
   flex: none;
   border-left: 1px solid var(--border);
   background: var(--panel);
@@ -1257,6 +1229,53 @@ button.on {
   display: flex;
   flex-direction: column;
   gap: 3px;
+}
+.icon-picker {
+  position: relative;
+}
+.icon-picker-button {
+  width: 48px;
+  font-size: 16px;
+  padding: 2px 0;
+}
+.icon-picker-popover {
+  position: fixed;
+  right: auto;
+  overflow-y: auto;
+  padding: 6px;
+}
+.icon-picker-default {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  text-align: left;
+}
+.icon-picker-group {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 8px 2px 3px;
+}
+.icon-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 2px;
+}
+.icon-picker-choice {
+  font-size: 17px;
+  padding: 3px 0;
+  border: 1px solid transparent;
+  background: transparent;
+}
+.icon-picker-choice:hover,
+.icon-picker-default:hover {
+  background: var(--hover);
+}
+.icon-picker-choice.selected,
+.icon-picker-default.selected {
+  border-color: var(--accent);
+  background: var(--hover);
 }
 .field-label {
   font-size: 11px;
@@ -1376,7 +1395,8 @@ button.on {
   flex-direction: column;
 }
 .bottom-panel.open {
-  height: 230px;
+  height: var(--bottom-height, 230px);
+  flex: none;
 }
 .bottom-tabs {
   display: flex;
@@ -1920,6 +1940,56 @@ button.brand:hover {
   height: 3px;
   top: 2px;
   background: var(--accent);
+}
+/* Drag handles on the inner edges of the side and bottom panels; they sit over the panel's border. */
+.panel-resizer {
+  flex: none;
+  position: relative;
+  z-index: 5;
+  touch-action: none;
+}
+.panel-resizer.vertical {
+  width: 7px;
+  margin: 0 -3px;
+  cursor: col-resize;
+}
+.panel-resizer.horizontal {
+  height: 7px;
+  margin: -3px 0;
+  cursor: row-resize;
+}
+.panel-resizer::after {
+  content: "";
+  position: absolute;
+  background: transparent;
+  transition: background 0.1s;
+}
+.panel-resizer.vertical::after {
+  top: 0;
+  bottom: 0;
+  left: 2px;
+  width: 3px;
+}
+.panel-resizer.horizontal::after {
+  left: 0;
+  right: 0;
+  top: 2px;
+  height: 3px;
+}
+.panel-resizer:hover::after,
+.panel-resizer:active::after {
+  background: var(--accent);
+}
+/* Keep the resize cursor and stop text selection while a panel edge is being dragged. */
+body.resizing-col,
+body.resizing-col * {
+  cursor: col-resize !important;
+  user-select: none;
+}
+body.resizing-row,
+body.resizing-row * {
+  cursor: row-resize !important;
+  user-select: none;
 }
 .trees-panel {
   border-bottom: none;

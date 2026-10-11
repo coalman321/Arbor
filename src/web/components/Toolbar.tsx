@@ -272,6 +272,7 @@ export function Tabs() {
                 closeTab(id);
               }}
               aria-label={`Close ${id}`}
+              title="Close (Ctrl+W)"
             >
               ×
             </button>

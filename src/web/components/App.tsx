@@ -10,10 +10,11 @@ import {
   selectedNode,
 } from "../actions.ts";
 import { wsUrl } from "../api.ts";
-import { dirtyCount, loadProject, reconcileWithDisk, redo, saveAll, toast, toggleFocus, togglePanel, undo, useStore } from "../store.ts";
+import { closeTab, dirtyCount, loadProject, reconcileWithDisk, redo, saveAll, toast, toggleFocus, togglePanel, undo, useStore } from "../store.ts";
 import { BottomPanel } from "./BottomPanel.tsx";
 import { Canvas } from "./Canvas.tsx";
 import { Inspector } from "./Inspector.tsx";
+import { PanelResizer, usePanelSizes } from "./PanelResizer.tsx";
 import { ConflictBanner, ContextMenu, Dialogs, NodePicker, Toast } from "./Overlays.tsx";
 import { ProjectMovedBanner, Welcome } from "./ProjectUI.tsx";
 import { Sidebar } from "./Sidebar.tsx";
@@ -36,6 +37,13 @@ function onKeyDown(e: KeyboardEvent) {
   if (mod && key === "s") {
     e.preventDefault();
     void saveAll();
+    return;
+  }
+  // Closes the open tree's tab (the desktop app moves closing the window to Ctrl+Shift+W).
+  if (mod && key === "w" && !e.shiftKey && !e.altKey) {
+    e.preventDefault();
+    const active = useStore.getState().active;
+    if (active) closeTab(active);
     return;
   }
   const panelKey =
@@ -122,6 +130,8 @@ export function App() {
   const status = useStore((s) => s.status);
   const loadError = useStore((s) => s.loadError);
   const panels = useStore((s) => s.panels);
+  const bottomOpen = useStore((s) => s.bottomOpen);
+  const [sizes, setSize] = usePanelSizes();
   useFileEvents();
   useEffect(() => {
     void loadProject();
@@ -173,14 +183,20 @@ export function App() {
         <Toolbar />
         <ProjectMovedBanner />
         <ConflictBanner />
-        <div className="main">
+        <div
+          className="main"
+          style={{ "--sidebar-width": `${sizes.left}px`, "--inspector-width": `${sizes.right}px`, "--bottom-height": `${sizes.bottom}px` } as React.CSSProperties}
+        >
           {panels.left ? <Sidebar /> : <EdgeStrip side="left" />}
+          {panels.left && <PanelResizer edge="left" size={sizes.left} onResize={(v) => setSize("left", v)} />}
           <div className="center">
             <Tabs />
             <Canvas />
             <ReplayBar />
+            {panels.bottom && bottomOpen && <PanelResizer edge="bottom" size={sizes.bottom} onResize={(v) => setSize("bottom", v)} />}
             {panels.bottom ? <BottomPanel /> : <EdgeStrip side="bottom" />}
           </div>
+          {panels.right && <PanelResizer edge="right" size={sizes.right} onResize={(v) => setSize("right", v)} />}
           {panels.right ? <Inspector /> : <EdgeStrip side="right" />}
         </div>
         <ContextMenu />
