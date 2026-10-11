@@ -41,6 +41,12 @@ describe("xml", () => {
     expect(serializeSpecFile(models)).toBe(xml);
   });
 
+  it("keeps a node type's icon in its MetaFields", () => {
+    const xml = serializeSpecFile([{ id: "Dock", category: "Action", ports: [], source: "spec", metadata: { icon: "🔌" } }]);
+    expect(xml).toContain("<MetaFields>");
+    expect(parseSpecFile(xml)[0].metadata).toEqual({ icon: "🔌" });
+  });
+
   it("normalizes v3-style explicit category tags and escapes attributes", () => {
     const parsed = parseTreeFile(
       `<root BTCPP_format="4"><BehaviorTree ID="T"><Sequence>` +

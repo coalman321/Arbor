@@ -176,6 +176,7 @@ export function Canvas() {
         data: {
           item,
           category: categoryOf(item.node, models),
+          icon: modelFor(item.node, models)?.metadata?.icon,
           problems: own,
           foldedProblems,
           dir,

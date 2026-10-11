@@ -296,7 +296,7 @@ function Palette() {
                       onDoubleClick={() => quickAdd(paletteId)}
                       title={`${m.description ?? m.id}${m.ports.length ? "\n\nPorts: " + m.ports.map((p) => `${p.name} (${p.direction})`).join(", ") : ""}\n\nDrag onto the canvas, or double-click to add to the selected node.`}
                     >
-                      <span className="palette-icon">{iconFor(m.id, m.category)}</span>
+                      <span className="palette-icon">{iconFor(m.id, m.category, m.metadata?.icon)}</span>
                       <span className="palette-label">{m.id}</span>
                       {m.source === "spec" && (
                         <button

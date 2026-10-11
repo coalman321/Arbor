@@ -135,6 +135,7 @@ The editor writes files in a canonical layout: two-space indent, attributes in t
 |---|---|
 | <kbd>Ctrl</kbd>+<kbd>S</kbd> | Save all |
 | <kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> | Undo / redo (per tree) |
+| <kbd>Ctrl</kbd>+<kbd>W</kbd> | Close the current tab (in the desktop app, <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>W</kbd> closes the window) |
 | <kbd>A</kbd> | Add a child (or sibling) to the selection |
 | <kbd>Del</kbd> | Delete the selected node and its children |
 | <kbd>Ctrl</kbd>+<kbd>C</kbd> / <kbd>X</kbd> / <kbd>V</kbd> / <kbd>D</kbd> | Copy / cut / paste / duplicate |

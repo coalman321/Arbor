@@ -2,7 +2,7 @@
 // the window quits the app, and the server with it. Projects are opened from the UI's own screen.
 // Bundled to build/desktop/main.cjs by scripts/bundle.mjs and packaged by electron-builder.
 
-import { app, BrowserWindow, dialog, shell } from "electron";
+import { app, BrowserWindow, dialog, Menu, shell, type MenuItemConstructorOptions } from "electron";
 import { join } from "node:path";
 import { configDir, distLoader, startServer, Workspace, type RunningServer } from "../server/index.ts";
 import { isNewer, latestRelease } from "./update.ts";
@@ -25,7 +25,22 @@ async function listen(): Promise<RunningServer> {
   }
 }
 
+// Electron's default menu closes the window on Ctrl/Cmd+W, before the page sees the key. The UI
+// uses that shortcut to close the open tree's tab, so closing the window moves to Ctrl/Cmd+Shift+W.
+function setMenu() {
+  const mac = process.platform === "darwin";
+  const template: MenuItemConstructorOptions[] = [
+    ...(mac ? [{ role: "appMenu" } as const] : []),
+    { label: "File", submenu: [{ role: "close", accelerator: "CmdOrCtrl+Shift+W" }, ...(mac ? [] : [{ role: "quit" } as const])] },
+    { role: "editMenu" },
+    { role: "viewMenu" },
+    { label: "Window", submenu: mac ? [{ role: "minimize" }, { role: "zoom" }, { type: "separator" }, { role: "front" }] : [{ role: "minimize" }] },
+  ];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
 async function start() {
+  setMenu();
   server = await listen();
   const origin = `http://127.0.0.1:${server.port}`;
   win = new BrowserWindow({

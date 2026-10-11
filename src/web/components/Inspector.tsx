@@ -101,7 +101,7 @@ function NodeInspector({ path, tree, node, readOnly }: { path: string; tree: Tre
   return (
     <div className="inspector-body">
       <div className={`inspector-title cat-${category.toLowerCase()}`}>
-        <span className="bt-node-icon">{iconFor(node.type, category)}</span>
+        <span className="bt-node-icon">{iconFor(node.type, category, model?.metadata?.icon)}</span>
         <div>
           <div className="inspector-type">{isSubTree ? `SubTree · ${node.attrs.ID ?? "?"}` : node.type}</div>
           <div className="muted small-text">
@@ -111,13 +111,15 @@ function NodeInspector({ path, tree, node, readOnly }: { path: string; tree: Tre
         </div>
       </div>
       {model?.description && <p className="inspector-desc">{model.description}</p>}
-      {model?.metadata && (
+      {model?.metadata && Object.keys(model.metadata).some((k) => k !== "icon") && (
         <div className="meta">
-          {Object.entries(model.metadata).map(([k, v]) => (
-            <span key={k} className="chip">
-              {k}: {v}
-            </span>
-          ))}
+          {Object.entries(model.metadata)
+            .filter(([k]) => k !== "icon")
+            .map(([k, v]) => (
+              <span key={k} className="chip">
+                {k}: {v}
+              </span>
+            ))}
         </div>
       )}
 
