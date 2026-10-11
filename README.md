@@ -6,7 +6,7 @@ A local editor and live viewer for [BehaviorTree.CPP](https://www.behaviortree.d
 
 ## Quick start
 
-The desktop app for Linux, macOS and Windows (x64 and arm64) is attached to each [GitHub release](https://github.com/coalman321/Arbor/releases): a `.dmg` for macOS, an installer `.exe` for Windows, and an `.AppImage` for Linux. It starts on a screen for opening or creating a project, and quitting it stops everything. The app isn't notarized by Apple yet, so the first time you open it macOS says it can't verify it: click **Done**, then go to **System Settings → Privacy & Security** and click **Open Anyway** next to the message about Arbor. Windows SmartScreen may also warn; click **More info → Run anyway**. To build it for your own machine, run `npm run build:desktop`, which writes it to `release/`, or run it from a checkout with `npm run desktop`.
+The desktop app for Linux, macOS and Windows (x64 and arm64) is attached to each [GitHub release](https://github.com/coalman321/Arbor/releases): a `.dmg` for macOS, an installer `.exe` for Windows, and an `.AppImage` for Linux. It starts on a screen for opening or creating a project, and quitting it stops everything. The app isn't notarized by Apple yet, so the first time you open it macOS says it can't verify it: click **Done**, then go to **System Settings → Privacy & Security** and click **Open Anyway** next to the message about Arbor. Windows SmartScreen may also warn; click **More info → Run anyway**. To build it yourself, see [Building the desktop app](#building-the-desktop-app).
 
 To embed the editor in another Node application, `npm run bundle` writes a self-contained library to `build/lib/arbor.mjs` (see [src/server/index.ts](src/server/index.ts) for how to start it).
 
@@ -43,6 +43,27 @@ Other commands:
 | `npm run typecheck` | `tsc --noEmit` |
 
 `--host 0.0.0.0` makes the editor reachable from other machines. The API can write files in the project and has no authentication, so do that only on a trusted network.
+
+### Building the desktop app
+
+The desktop app is an Electron wrapper around the same backend and UI. From a checkout with dependencies installed (`npm ci`):
+
+```bash
+npm run desktop          # build the bundle and open the app straight from the checkout
+npm run build:desktop    # package an installer into release/
+```
+
+`build:desktop` builds for the platform and CPU you run it on, and names the file `Arbor-<version>-<os>-<arch>.<ext>`:
+
+| Platform | Output |
+|---|---|
+| macOS | `release/Arbor-<version>-mac-<arch>.dmg`, plus the unpacked `Arbor.app` in `release/mac-<arch>/` |
+| Windows | `release/Arbor-<version>-win-<arch>.exe` (NSIS installer) |
+| Linux | `release/Arbor-<version>-linux-<arch>.AppImage` |
+
+To build for the other CPU architecture, pass it through to electron-builder, for example `npm run build:desktop -- --x64` on an Apple Silicon Mac. Build each operating system on that operating system; the [release workflow](.github/workflows/release.yml) does this on one runner per platform and architecture.
+
+The packaging settings (app ID, targets, icons from `resources/`) are in the `build` field of [package.json](package.json).
 
 ## Projects
 

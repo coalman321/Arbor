@@ -301,13 +301,95 @@ hr {
   vertical-align: -0.2em;
 }
 
+/* Popovers anchored under a toolbar button; unlike .menu, they hold ordinary buttons and inputs. */
+.popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.2);
+  padding: 4px;
+}
+.settings-menu {
+  position: relative;
+}
+.settings-button {
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px 8px;
+}
+.settings-popover {
+  width: 300px;
+}
+.setting {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.setting:hover {
+  background: var(--hover);
+}
+.setting input {
+  margin-top: 2px;
+}
+.setting-segmented {
+  display: flex;
+  gap: 4px;
+  padding: 2px 10px 6px;
+}
+.setting-segmented button {
+  flex: 1;
+}
 .live-controls {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 6px;
 }
+.live-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.live-status .chevron {
+  color: var(--muted);
+  font-size: 11px;
+}
+.live-popover {
+  width: 320px;
+  gap: 4px;
+}
+.live-tree {
+  align-self: flex-start;
+  padding: 2px 10px;
+}
+.live-popover .live-message {
+  margin: 0;
+  padding: 2px 10px;
+}
+.live-mismatches {
+  margin: 0;
+  padding: 2px 10px 2px 26px;
+  color: var(--warning);
+  max-height: 120px;
+  overflow: auto;
+}
+.live-connect {
+  display: flex;
+  gap: 4px;
+  padding: 4px 6px 6px;
+}
 .live-url {
-  width: 210px;
+  flex: 1;
+  min-width: 0;
 }
 .live-label {
   white-space: nowrap;
@@ -1693,9 +1775,6 @@ button.brand:hover {
 
 /* ---------- hiding panels ---------- */
 
-.view-toggles button {
-  min-width: 30px;
-}
 .edge-strip {
   flex: none;
   display: flex;
@@ -1864,11 +1943,4 @@ button.brand:hover {
 .toolbar {
   flex-wrap: wrap;
   row-gap: 6px;
-}
-.live-controls {
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-.live-url {
-  width: 170px;
 }

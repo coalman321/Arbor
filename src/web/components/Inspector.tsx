@@ -57,8 +57,8 @@ export function Inspector() {
   if (!active || !trees[active]) {
     return (
       <aside className="inspector">
-        <button className="icon-button inspector-hide" onClick={() => togglePanel("right")} title="Hide the properties panel (Ctrl+Alt+B)">
-          ×
+        <button className="icon-button inspector-hide" onClick={() => togglePanel("right")} title="Fold the properties panel (Ctrl+Alt+B)">
+          ▸
         </button>
         <p className="muted pad">Open a tree to see its properties.</p>
       </aside>
@@ -67,8 +67,8 @@ export function Inspector() {
   const r = selection ? resolvePath(trees, active, selection) : null;
   return (
     <aside className="inspector">
-        <button className="icon-button inspector-hide" onClick={() => togglePanel("right")} title="Hide the properties panel (Ctrl+Alt+B)">
-          ×
+        <button className="icon-button inspector-hide" onClick={() => togglePanel("right")} title="Fold the properties panel (Ctrl+Alt+B)">
+          ▸
         </button>
       {r ? <NodeInspector key={selection!} path={selection!} tree={r.tree} node={r.node} readOnly={r.readOnly} /> : <TreeInspector tree={trees[active]} />}
     </aside>

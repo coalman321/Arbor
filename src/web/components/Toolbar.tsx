@@ -1,19 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { Logo } from "./Logo.tsx";
 import { ProjectMenu } from "./ProjectUI.tsx";
-import { pickLogFile } from "./ReplayBar.tsx";
 import { closeReplay } from "../replay.ts";
 import { connectLive, disconnectLive, setPaused } from "../live.ts";
 import { closeTab, localStorageSet, openTree, redo, saveAll, toggleFocus, togglePanel, undo, useStore, type Panels } from "../store.ts";
 
 export function Toolbar() {
   const dirty = useStore((s) => Object.values(s.files).filter((f) => f.dirty).length);
-  const active = useStore((s) => s.active);
   const canUndo = useStore((s) => !!(s.active && s.history[s.active]?.past.length));
   const canRedo = useStore((s) => !!(s.active && s.history[s.active]?.future.length));
-  const dir = useStore((s) => s.layoutDir);
-  const frames = useStore((s) => s.decoratorFrames);
-  const explain = useStore((s) => s.explainEdges);
 
   return (
     <header className="toolbar">
@@ -33,49 +28,10 @@ export function Toolbar() {
           ↷
         </button>
       </div>
-      <div className="toolbar-group">
-        <button
-          disabled={!active}
-          onClick={() => {
-            const next = dir === "TB" ? "LR" : "TB";
-            localStorageSet("bt-editor.layoutDir", next);
-            useStore.setState({ layoutDir: next });
-          }}
-          title="Toggle layout direction"
-        >
-          {dir === "TB" ? "⇣ Top-down" : "⇢ Left-right"}
-        </button>
-        <button
-          disabled={!active}
-          className={frames ? "on" : ""}
-          aria-pressed={frames}
-          onClick={() => {
-            localStorageSet("bt-editor.decoratorFrames", String(!frames));
-            useStore.setState({ decoratorFrames: !frames });
-          }}
-          title="Draw decorators (Retry, Timeout, Inverter, ...) as frames around their child, or as separate boxes"
-        >
-          ⬚ Decorator frames
-        </button>
-        <button
-          disabled={!active}
-          className={explain ? "on" : ""}
-          aria-pressed={explain}
-          onClick={() => {
-            localStorageSet("bt-editor.explainEdges", String(!explain));
-            useStore.setState({ explainEdges: !explain });
-          }}
-          title="Label every connection in plain words (hover a label for more)"
-        >
-          Aa Explain
-        </button>
-        <button disabled={!active} onClick={() => useStore.setState((s) => ({ fitRequest: s.fitRequest + 1 }))} title="Fit tree to view (F)">
-          ⤢ Fit
-        </button>
-      </div>
-      <ViewToggles />
+      <FocusToggle />
       <div className="spacer" />
       <LiveControls />
+      <SettingsMenu />
     </header>
   );
 }
@@ -86,32 +42,19 @@ const PANEL_INFO: Record<keyof Panels, { icon: string; name: string; keys: strin
   right: { icon: "◨", name: "properties panel", keys: "Ctrl+Alt+B" },
 };
 
-/** Show/hide buttons for the panels around the canvas, and focus mode (all hidden). */
-function ViewToggles() {
+/** Focus mode: hide every panel around the canvas (each leaves an edge strip to bring it back). */
+function FocusToggle() {
   const panels = useStore((s) => s.panels);
   const focused = !panels.left && !panels.bottom && !panels.right;
   return (
-    <div className="toolbar-group view-toggles" role="group" aria-label="Panels">
-      {(Object.keys(PANEL_INFO) as (keyof Panels)[]).map((k) => (
-        <button
-          key={k}
-          className={panels[k] ? "on" : ""}
-          aria-pressed={panels[k]}
-          onClick={() => togglePanel(k)}
-          title={`${panels[k] ? "Hide" : "Show"} the ${PANEL_INFO[k].name} (${PANEL_INFO[k].keys})`}
-        >
-          {PANEL_INFO[k].icon}
-        </button>
-      ))}
-      <button
-        className={focused ? "on" : ""}
-        aria-pressed={focused}
-        onClick={toggleFocus}
-        title={focused ? "Bring the panels back (Ctrl+Shift+F)" : "Hide all panels to see just the tree (Ctrl+Shift+F)"}
-      >
-        {focused ? "Exit focus" : "Focus"}
-      </button>
-    </div>
+    <button
+      className={focused ? "on" : ""}
+      aria-pressed={focused}
+      onClick={toggleFocus}
+      title={focused ? "Bring the panels back (Ctrl+Shift+F)" : "Hide all panels to see just the tree (Ctrl+Shift+F)"}
+    >
+      {focused ? "Exit focus" : "Focus"}
+    </button>
   );
 }
 
@@ -127,14 +70,97 @@ export function EdgeStrip({ side }: { side: keyof Panels }) {
   );
 }
 
+/** Close a popover on a click outside `ref` or on Escape. */
+function useDismiss(open: boolean, setOpen: (open: boolean) => void, ref: RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    if (!open) return;
+    const down = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setOpen(false);
+    const key = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    window.addEventListener("mousedown", down);
+    window.addEventListener("keydown", key);
+    return () => {
+      window.removeEventListener("mousedown", down);
+      window.removeEventListener("keydown", key);
+    };
+  }, [open, setOpen, ref]);
+}
+
+/** Display preferences, saved per browser. */
+function SettingsMenu() {
+  const dir = useStore((s) => s.layoutDir);
+  const frames = useStore((s) => s.decoratorFrames);
+  const explain = useStore((s) => s.explainEdges);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useDismiss(open, setOpen, ref);
+  const setDir = (next: "TB" | "LR") => {
+    localStorageSet("bt-editor.layoutDir", next);
+    useStore.setState({ layoutDir: next });
+  };
+
+  return (
+    <div className="settings-menu" ref={ref}>
+      <button className={`settings-button ${open ? "on" : ""}`} onClick={() => setOpen(!open)} title="Settings" aria-label="Settings" aria-haspopup="dialog" aria-expanded={open}>
+        ⚙
+      </button>
+      {open && (
+        <div className="popover settings-popover" role="dialog" aria-label="Settings">
+          <div className="menu-section">Layout direction</div>
+          <div className="setting-segmented" role="group" aria-label="Layout direction">
+            <button className={dir === "TB" ? "on" : ""} aria-pressed={dir === "TB"} onClick={() => setDir("TB")}>
+              ⇣ Top-down
+            </button>
+            <button className={dir === "LR" ? "on" : ""} aria-pressed={dir === "LR"} onClick={() => setDir("LR")}>
+              ⇢ Left-right
+            </button>
+          </div>
+          <div className="menu-section">Display</div>
+          <label className="setting">
+            <input
+              type="checkbox"
+              checked={frames}
+              onChange={() => {
+                localStorageSet("bt-editor.decoratorFrames", String(!frames));
+                useStore.setState({ decoratorFrames: !frames });
+              }}
+            />
+            <span>
+              Decorator frames
+              <div className="muted small-text">Draw Retry, Timeout, Inverter, ... as frames around their child instead of separate boxes</div>
+            </span>
+          </label>
+          <label className="setting">
+            <input
+              type="checkbox"
+              checked={explain}
+              onChange={() => {
+                localStorageSet("bt-editor.explainEdges", String(!explain));
+                useStore.setState({ explainEdges: !explain });
+              }}
+            />
+            <span>
+              Explain connections
+              <div className="muted small-text">Label every connection in plain words (hover a label for more)</div>
+            </span>
+          </label>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Connection status in the toolbar; the URL and connect/disconnect live in its popover. */
 function LiveControls() {
   const live = useStore((s) => s.live);
   const [url, setUrl] = useState(live.url);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
   const busy = live.state !== "idle";
   // The project's default URL arrives after the first render.
   useEffect(() => {
     if (!url && live.url) setUrl(live.url);
   }, [live.url, url]);
+  useDismiss(open, setOpen, ref);
 
   const label: Record<typeof live.state, string> = {
     idle: "Offline",
@@ -144,56 +170,72 @@ function LiveControls() {
     error: "Error",
     replay: "Replaying a log",
   };
-  const mismatches = live.mapping?.mismatches.length ?? 0;
+  const mismatches = live.state === "connected" ? (live.mapping?.mismatches ?? []) : [];
 
   return (
-    <div className="live-controls">
-      <span className={`live-dot state-${live.state}`} title={live.message ?? label[live.state]} />
-      <span className="live-label" title={live.message}>
-        {label[live.state]}
-        {live.state === "connected" && live.treeId && (
-          <button className="link" onClick={() => openTree(live.treeId!)} title="Open the tree the robot is running">
-            {" "}
-            · {live.treeId}
-          </button>
-        )}
-      </span>
-      {live.state === "connected" && mismatches > 0 && (
-        <span className="badge badge-warning" title={live.mapping!.mismatches.join("\n")}>
-          {mismatches} mismatch{mismatches === 1 ? "" : "es"}
-        </span>
-      )}
-      <input
-        className="live-url mono"
-        value={busy ? live.url : url}
-        disabled={busy}
-        onChange={(e) => setUrl(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && connectLive(url)}
-        placeholder="ws://robot:1670"
-        aria-label="Robot WebSocket URL"
-      />
-      {live.state === "replay" ? (
-        <button onClick={closeReplay} title="Stop replaying the log">
-          Close log
+    <div className="live-controls" ref={ref}>
+      {live.state === "connected" && (
+        <button className={live.paused ? "on" : ""} onClick={() => setPaused(!live.paused)} title="Freeze the displayed statuses">
+          {live.paused ? "Resume" : "Pause"}
         </button>
-      ) : busy ? (
-        <>
-          {live.state === "connected" && (
-            <button onClick={() => setPaused(!live.paused)} title="Freeze the displayed statuses">
-              {live.paused ? "Resume" : "Pause"}
+      )}
+      <button className="live-status" onClick={() => setOpen(!open)} title={live.message ?? "Robot connection"} aria-haspopup="dialog" aria-expanded={open}>
+        <span className={`live-dot state-${live.state}`} />
+        <span className="live-label">{label[live.state]}</span>
+        {mismatches.length > 0 && (
+          <span className="badge badge-warning">
+            {mismatches.length} mismatch{mismatches.length === 1 ? "" : "es"}
+          </span>
+        )}
+        <span className="chevron">▾</span>
+      </button>
+      {open && (
+        <div className="popover live-popover" role="dialog" aria-label="Robot connection">
+          <div className="menu-section">Robot connection</div>
+          {live.message && <p className="live-message muted small-text">{live.message}</p>}
+          {live.state === "connected" && live.treeId && (
+            <button
+              className="link live-tree"
+              onClick={() => {
+                setOpen(false);
+                openTree(live.treeId!);
+              }}
+              title="Open the tree the robot is running"
+            >
+              Running: <strong>{live.treeId}</strong>
             </button>
           )}
-          <button onClick={disconnectLive}>Disconnect</button>
-        </>
-      ) : (
-        <>
-          <button className="primary" onClick={() => connectLive(url || live.url)}>
-            Connect
-          </button>
-          <button onClick={pickLogFile} title="Replay a BehaviorTree.CPP log file (.btlog); you can also drop one on the window">
-            Replay log…
-          </button>
-        </>
+          {mismatches.length > 0 && (
+            <ul className="live-mismatches small-text">
+              {mismatches.map((m, i) => (
+                <li key={i}>{m}</li>
+              ))}
+            </ul>
+          )}
+          <div className="live-connect">
+            <input
+              className="live-url mono"
+              value={busy ? live.url : url}
+              disabled={busy}
+              onChange={(e) => setUrl(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && connectLive(url)}
+              placeholder="ws://robot:1670"
+              aria-label="Robot WebSocket URL"
+              autoFocus={!busy}
+            />
+            {live.state === "replay" ? (
+              <button onClick={closeReplay} title="Stop replaying the log">
+                Close log
+              </button>
+            ) : busy ? (
+              <button onClick={disconnectLive}>Disconnect</button>
+            ) : (
+              <button className="primary" onClick={() => connectLive(url || live.url)}>
+                Connect
+              </button>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

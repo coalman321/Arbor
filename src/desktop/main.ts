@@ -5,6 +5,7 @@
 import { app, BrowserWindow, dialog, shell } from "electron";
 import { join } from "node:path";
 import { configDir, distLoader, startServer, Workspace, type RunningServer } from "../server/index.ts";
+import { isNewer, latestRelease } from "./update.ts";
 
 // The UI keeps its settings in localStorage, which belongs to the page's origin; a fixed port keeps
 // that origin (and the settings) the same from one launch to the next.
@@ -62,6 +63,21 @@ async function start() {
   });
   win.on("closed", () => (win = null));
   await win.loadURL(`${origin}/`);
+  if (app.isPackaged) void checkForUpdate();
+}
+
+async function checkForUpdate() {
+  const release = await latestRelease();
+  if (!release || !win || !isNewer(release.version, app.getVersion())) return;
+  const { response } = await dialog.showMessageBox(win, {
+    type: "info",
+    message: `Arbor ${release.version} is available.`,
+    detail: `You have ${app.getVersion()}. Open the release page to download it?`,
+    buttons: ["Download", "Later"],
+    defaultId: 0,
+    cancelId: 1,
+  });
+  if (response === 0) void shell.openExternal(release.url);
 }
 
 // One server per machine: a second launch brings the existing window forward instead.

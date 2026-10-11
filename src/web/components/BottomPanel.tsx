@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { serializeTreeFile } from "../../shared/xml_write.ts";
 import { requestBlackboard, setBlackboardPolling } from "../live.ts";
-import { openTree, togglePanel, useDiagnostics, useStore } from "../store.ts";
+import { openTree, useDiagnostics, useStore } from "../store.ts";
 
 export function reveal(treeId: string, path: string) {
   openTree(treeId, path);
@@ -47,9 +47,6 @@ export function BottomPanel() {
         <div className="spacer" />
         <button className="icon-button" onClick={() => useStore.setState({ bottomOpen: !open })} title={open ? "Shrink to its tabs" : "Expand"}>
           {open ? "▾" : "▴"}
-        </button>
-        <button className="icon-button" onClick={() => togglePanel("bottom")} title="Hide this panel (Ctrl+J)">
-          ×
         </button>
       </div>
       {open && (
