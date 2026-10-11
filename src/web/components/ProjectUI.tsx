@@ -4,8 +4,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { BrowseResult, WorkspaceInfo } from "../../shared/model.ts";
 import { api } from "../api.ts";
+import { useDismiss } from "../dismiss.ts";
 import { pickLogFile } from "./ReplayBar.tsx";
-import { Logo } from "./Logo.tsx";
+import { Logo, Wordmark } from "./Logo.tsx";
 import {
   confirmDiscard,
   importTreeFile,
@@ -207,12 +208,9 @@ export function ProjectMenu() {
   const [info, reload] = useWorkspace();
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!open) return;
-    reload();
-    const down = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setOpen(false);
-    window.addEventListener("mousedown", down);
-    return () => window.removeEventListener("mousedown", down);
+    if (open) reload();
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  useDismiss(ref, () => setOpen(false), open);
   const dialog = (d: { dialog: DialogState }) => {
     setOpen(false);
     useStore.setState(d);
@@ -279,7 +277,7 @@ export function Welcome() {
     <div className="welcome">
       <div className="welcome-card">
         <h1>
-          <Logo /> Arbor
+          <Wordmark />
         </h1>
         <p className="muted">The behavior tree editor. Open a project to start, or make a new one.</p>
         <div className="row welcome-actions">

@@ -283,9 +283,8 @@ hr {
   color: var(--accent);
   user-select: none;
 }
-.app-brand .logo {
-  width: 1.5em;
-  height: 1.5em;
+.app-brand .wordmark {
+  height: 26px;
 }
 .brand {
   font-weight: 650;
@@ -293,6 +292,10 @@ hr {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+.wordmark {
+  display: block;
+  width: auto;
 }
 .logo {
   color: var(--accent);
@@ -1708,7 +1711,7 @@ button.brand:hover {
   padding: 4px 10px;
 }
 .modal:has(.licenses) {
-  width: min(560px, calc(100vw - 32px));
+  width: min(640px, calc(100vw - 32px));
 }
 .licenses {
   display: flex;
@@ -1726,6 +1729,29 @@ button.brand:hover {
 .licenses summary {
   cursor: pointer;
 }
+.license-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.license-list li + li {
+  border-top: 1px solid var(--border);
+}
+.license-list details {
+  padding: 5px 10px;
+}
+.license-list details[open] {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.license-id {
+  float: right;
+  color: var(--muted);
+  font-size: 11px;
+}
 .license-text {
   max-height: 40vh;
   overflow: auto;
@@ -1734,7 +1760,7 @@ button.brand:hover {
   border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 11px;
-  white-space: pre-wrap;
+  white-space: pre;
 }
 .modal:has(.browse) {
   width: min(640px, calc(100vw - 32px));
@@ -1795,11 +1821,11 @@ button.brand:hover {
   box-shadow: var(--shadow);
 }
 .welcome-card h1 {
-  margin: 0 0 4px;
-  font-size: 22px;
+  margin: 0 0 12px;
   display: flex;
-  align-items: center;
-  gap: 8px;
+}
+.welcome-card h1 .wordmark {
+  height: 60px;
 }
 .welcome-actions {
   margin: 16px 0 4px;

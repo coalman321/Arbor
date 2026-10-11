@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { NODE_CATEGORIES, type AboutInfo, type NodeCategory, type NodeModel, type PortDirection, type PortModel } from "../../shared/model.ts";
+import { NODE_CATEGORIES, type AboutInfo, type BundledGitInfo, type LibraryLicense, type NodeCategory, type NodeModel, type PortDirection, type PortModel } from "../../shared/model.ts";
 import { allowedChildren } from "../../shared/validate.ts";
-import { api } from "../api.ts";
+import { api, libraryLicenses } from "../api.ts";
+import { useDismiss } from "../dismiss.ts";
 import {
   addNode,
   canHaveMoreChildren,
@@ -33,19 +34,6 @@ import { CONDITION_FIRST } from "../layout.ts";
 import { findIn } from "../tree_ops.ts";
 import { ICON_CHOICES, iconFor } from "./icons.ts";
 import { BrowseDialog } from "./ProjectUI.tsx";
-
-function useDismiss(ref: React.RefObject<HTMLElement | null>, onClose: () => void) {
-  useEffect(() => {
-    const down = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && onClose();
-    const key = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("mousedown", down);
-    window.addEventListener("keydown", key);
-    return () => {
-      window.removeEventListener("mousedown", down);
-      window.removeEventListener("keydown", key);
-    };
-  }, [ref, onClose]);
-}
 
 /** Keeps a popup at (x, y) inside the viewport. */
 function clampStyle(x: number, y: number, w: number, h: number): React.CSSProperties {
@@ -262,11 +250,17 @@ export function Dialogs() {
 /** Arbor's licence, and those of the third-party programs this copy ships with. */
 function LicensesDialog({ close }: { close: () => void }) {
   const [about, setAbout] = useState<AboutInfo | null>(null);
+  const [libraries, setLibraries] = useState<LibraryLicense[] | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     api.about().then(setAbout, (e: Error) => setError(e.message));
+    libraryLicenses().then(setLibraries, () => setLibraries(null));
   }, []);
   const git = about?.bundledGit;
+  // Git ships with the desktop app; it goes in the list with the bundled libraries.
+  const rows: (LibraryLicense & { git?: BundledGitInfo })[] = [...(libraries ?? [])];
+  if (git) rows.push({ name: "git", version: git.version, license: "GPL-2.0-only", homepage: "https://git-scm.com", text: git.license, git });
+  rows.sort((a, b) => a.name.localeCompare(b.name));
   return (
     <div className="licenses">
       <h3>Open-source licences</h3>
@@ -280,30 +274,48 @@ function LicensesDialog({ close }: { close: () => void }) {
           .
         </p>
       </section>
-      {git && (
-        <section>
-          <h4>Git {git.version}</h4>
-          <p>
-            The desktop app includes Git for computers that don't have it, to compare trees between revisions.{" "}
-            {git.inUse ? "This computer has no Git of its own, so Arbor is using it." : "Arbor is using this computer's own Git instead."}
-          </p>
-          <p>
-            Git is free software under the GNU General Public License, version 2. You can get its{" "}
-            <a href={git.source} target="_blank" rel="noreferrer">
-              source code
-            </a>{" "}
-            and{" "}
-            <a href={git.build} target="_blank" rel="noreferrer">
-              how this build was made
-            </a>
-            .
-          </p>
-          <details>
-            <summary>GNU General Public License, version 2</summary>
-            <pre className="license-text">{git.license}</pre>
-          </details>
-        </section>
-      )}
+      <section>
+        <h4>Included software</h4>
+        {libraries === null && <p className="muted">The libraries are listed in built copies of Arbor; this one is running from source.</p>}
+        {rows.length > 0 && (
+          <>
+            <p>Arbor includes this open-source software.</p>
+            <ul className="license-list">
+              {rows.map((l) => (
+                <li key={`${l.name}@${l.version}`}>
+                  <details>
+                    <summary>
+                      <span className="mono">{l.name}</span> <span className="muted">{l.version}</span>
+                      <span className="license-id">{l.license}</span>
+                    </summary>
+                    {l.homepage && (
+                      <a href={l.homepage} target="_blank" rel="noreferrer" className="small-text">
+                        {l.homepage}
+                      </a>
+                    )}
+                    {l.git && (
+                      <p className="small-text">
+                        The desktop app includes Git for computers that don't have it, to compare trees between revisions.{" "}
+                        {l.git.inUse ? "This computer has no Git of its own, so Arbor is using it." : "Arbor is using this computer's own Git instead."}{" "}
+                        Get its{" "}
+                        <a href={l.git.source} target="_blank" rel="noreferrer">
+                          source code
+                        </a>{" "}
+                        and{" "}
+                        <a href={l.git.build} target="_blank" rel="noreferrer">
+                          how this build was made
+                        </a>
+                        .
+                      </p>
+                    )}
+                    {l.text && <pre className="license-text">{l.text}</pre>}
+                  </details>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </section>
       {error && <p className="error-text">{error}</p>}
       <div className="modal-actions">
         <button className="primary" onClick={close} autoFocus>
@@ -622,12 +634,7 @@ function IconPicker({ value, fallback, onChange }: { value: string; fallback: st
     const below = r.bottom + 4 + PICKER_HEIGHT <= window.innerHeight;
     setPos({ top: below ? r.bottom + 4 : Math.max(8, r.top - 4 - PICKER_HEIGHT), left: Math.max(8, r.right - PICKER_WIDTH) });
   };
-  useEffect(() => {
-    if (!open) return;
-    const down = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setPos(null);
-    window.addEventListener("mousedown", down);
-    return () => window.removeEventListener("mousedown", down);
-  }, [open]);
+  useDismiss(ref, () => setPos(null), open);
   const choose = (icon: string) => {
     onChange(icon);
     setPos(null);

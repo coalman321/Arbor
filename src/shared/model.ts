@@ -264,6 +264,17 @@ export interface BundledGitInfo {
   inUse: boolean;
 }
 
+/** A library bundled into Arbor's builds; dist/licenses.json lists them (scripts/licenses.mjs). */
+export interface LibraryLicense {
+  name: string;
+  version: string;
+  /** SPDX identifier, as the package declares it. */
+  license: string;
+  homepage: string | null;
+  /** The package's licence file(s), or null if it has none. */
+  text: string | null;
+}
+
 /** GET /api/about: third-party software this copy of Arbor ships with. */
 export interface AboutInfo {
   bundledGit: BundledGitInfo | null;

@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
-import { Logo } from "./Logo.tsx";
+import { useEffect, useRef, useState } from "react";
+import { Wordmark } from "./Logo.tsx";
 import { ProjectMenu } from "./ProjectUI.tsx";
+import { useDismiss } from "../dismiss.ts";
 import { closeReplay } from "../replay.ts";
 import { closeCompare, openCompare } from "../diff.ts";
 import { connectLive, disconnectLive, setPaused } from "../live.ts";
@@ -13,9 +14,8 @@ export function Toolbar() {
 
   return (
     <header className="toolbar">
-      <div className="app-brand" aria-label="Arbor">
-        <Logo />
-        <span>Arbor</span>
+      <div className="app-brand">
+        <Wordmark />
       </div>
       <ProjectMenu />
       <div className="toolbar-group">
@@ -87,21 +87,6 @@ export function EdgeStrip({ side }: { side: keyof Panels }) {
   );
 }
 
-/** Close a popover on a click outside `ref` or on Escape. */
-function useDismiss(open: boolean, setOpen: (open: boolean) => void, ref: RefObject<HTMLElement | null>) {
-  useEffect(() => {
-    if (!open) return;
-    const down = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setOpen(false);
-    const key = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
-    window.addEventListener("mousedown", down);
-    window.addEventListener("keydown", key);
-    return () => {
-      window.removeEventListener("mousedown", down);
-      window.removeEventListener("keydown", key);
-    };
-  }, [open, setOpen, ref]);
-}
-
 /** Display preferences, saved per browser. */
 function SettingsMenu() {
   const dir = useStore((s) => s.layoutDir);
@@ -109,7 +94,7 @@ function SettingsMenu() {
   const explain = useStore((s) => s.explainEdges);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  useDismiss(open, setOpen, ref);
+  useDismiss(ref, () => setOpen(false), open);
   const setDir = (next: "TB" | "LR") => {
     localStorageSet("bt-editor.layoutDir", next);
     useStore.setState({ layoutDir: next });
@@ -187,7 +172,7 @@ function LiveControls() {
   useEffect(() => {
     if (!url && live.url) setUrl(live.url);
   }, [live.url, url]);
-  useDismiss(open, setOpen, ref);
+  useDismiss(ref, () => setOpen(false), open);
 
   const label: Record<typeof live.state, string> = {
     idle: "Offline",

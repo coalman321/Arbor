@@ -1,4 +1,4 @@
-import type { AboutInfo, BrowseResult, GitInfo, NodeModel, ProjectSnapshot, RevSnapshot, SaveFileRequest, WorkspaceInfo } from "../shared/model.ts";
+import type { AboutInfo, BrowseResult, LibraryLicense, GitInfo, NodeModel, ProjectSnapshot, RevSnapshot, SaveFileRequest, WorkspaceInfo } from "../shared/model.ts";
 
 export class ApiError extends Error {
   constructor(
@@ -44,6 +44,12 @@ export const api = {
   about: () => call<AboutInfo>("GET", "/api/about"),
   gitSnapshot: (rev: string) => call<RevSnapshot>("GET", `/api/git/snapshot?rev=${encodeURIComponent(rev)}`),
 };
+
+/** The bundled libraries' licences, written by the build; null when running from source (--dev). */
+export async function libraryLicenses(): Promise<LibraryLicense[] | null> {
+  const res = await fetch("/licenses.json");
+  return res.ok && res.headers.get("content-type")?.includes("json") ? ((await res.json()) as LibraryLicense[]) : null;
+}
 
 export function wsUrl(path: string): string {
   return `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}${path}`;

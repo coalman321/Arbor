@@ -11,6 +11,7 @@ import { existsSync, rmSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
+import { addLicenses, collectLicenses, metafileInputs } from "./licenses.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 if (!existsSync(join(root, "dist", "index.html"))) {
@@ -27,9 +28,11 @@ const common = {
   // vite is only loaded for --dev; ws's native speedups are optional.
   external: ["vite", "bufferutil", "utf-8-validate"],
   logLevel: "warning",
+  metafile: true,
+  absWorkingDir: root,
 };
 
-await build({
+const lib = await build({
   ...common,
   entryPoints: [join(root, "src", "server", "index.ts")],
   outfile: join(root, "build", "lib", "arbor.mjs"),
@@ -38,12 +41,16 @@ await build({
   banner: { js: 'import { createRequire as __createRequire } from "node:module"; const require = __createRequire(import.meta.url);' },
 });
 
-await build({
+const desktop = await build({
   ...common,
   entryPoints: [join(root, "src", "desktop", "main.ts")],
   outfile: join(root, "build", "desktop", "main.cjs"),
   format: "cjs",
   external: [...common.external, "electron"],
 });
+
+// The frontend's notices are in dist/licenses.json already; add the server's.
+const inputs = [lib, desktop].flatMap((r) => metafileInputs(r.metafile, root));
+addLicenses(join(root, "dist", "licenses.json"), collectLicenses(inputs));
 
 console.log("Built build/lib/arbor.mjs and build/desktop/main.cjs");
