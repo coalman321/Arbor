@@ -181,7 +181,7 @@ function ProjectTrees({ height }: { height: number | null }) {
               {f.dirty && <span className="dirty-dot" title="Unsaved changes" />}
               {f.readOnlyReason && <span className="badge badge-error">read-only</span>}
             </div>
-            {f.treeIds.map((id) => (
+            {[...f.treeIds].sort((a, b) => a.localeCompare(b)).map((id) => (
               <div
                 key={id}
                 className={`tree-item ${active === id ? "active" : ""}`}
@@ -245,7 +245,7 @@ function Palette() {
       if (m.id === "SubTree" && m.source === "builtin") continue;
       if (match(m)) out.get(m.category)?.push(m);
     }
-    for (const list of out.values()) list.sort((a, b) => Number(a.source === "builtin") - Number(b.source === "builtin") || a.id.localeCompare(b.id));
+    for (const list of out.values()) list.sort((a, b) => a.id.localeCompare(b.id));
     return out;
   }, [models, filter]);
 
