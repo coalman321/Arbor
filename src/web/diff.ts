@@ -13,12 +13,13 @@ import { toast, useStore } from "./store.ts";
 export type GitRevs = Extract<GitInfo, { available: true }>;
 
 export interface DiffState {
-  /** Revisions compared: old ("from") and new ("to"). Either may be WORKTREE. */
+  /** The commit compared against: the "old" side. The "new" side is always the files on disk. */
   base: string;
-  target: string;
   status: "loading" | "ready" | "error";
   error?: string;
   git: GitRevs;
+  /** How many commits of history to list (raised by "Show more"). */
+  historyLimit: number;
   old?: RevSnapshot;
   new?: RevSnapshot;
   trees: TreeDefDiff[];
@@ -34,25 +35,35 @@ const get = useStore.getState;
 const set = useStore.setState;
 /** Answers to an older compare() that arrive late are dropped. */
 let request = 0;
+const HISTORY_PAGE = 200;
 
 export async function openCompare() {
   let git: GitInfo;
   try {
-    git = await api.gitInfo();
+    git = await api.gitInfo(HISTORY_PAGE);
   } catch (e) {
     return toast(`Couldn't read the git history: ${(e as Error).message}`, "error");
   }
   if (!git.available) return toast(git.reason, "error");
-  const [base, target] = defaultRevs(git);
-  set({ diff: { base, target, status: "loading", git, trees: [], merged: {}, active: null, selection: null }, menu: null, picker: null });
-  await compare(base, target);
+  if (!git.head) return toast("This repository has no commits yet", "error");
+  const base = defaultBase(git);
+  set({
+    diff: { base, status: "loading", git, historyLimit: HISTORY_PAGE, trees: [], merged: {}, active: null, selection: null },
+    menu: null,
+    picker: null,
+  });
+  await compare(base);
 }
 
-/** Uncommitted changes if there are any, else what the last commit to touch the trees changed. */
-function defaultRevs(git: GitRevs): [string, string] {
-  if (git.dirty || git.commits.length === 0) return ["HEAD", WORKTREE];
-  if (git.commits.length === 1) return [git.commits[0].sha, WORKTREE];
-  return [git.commits[1].sha, git.commits[0].sha];
+/**
+ * The checked-out commit if the files differ from it. Otherwise they match it, so start from the
+ * version before the last commit that changed the trees, to show what that commit did.
+ */
+function defaultBase(git: GitRevs): string {
+  // The newest listed commit has the same trees as HEAD (the list skips commits that don't touch
+  // them), and picking it keeps the selection visible in the history.
+  if (git.dirty || git.commits.length < 2) return git.commits[0]?.sha ?? git.head!;
+  return git.commits[1].sha;
 }
 
 export function closeCompare() {
@@ -60,20 +71,22 @@ export function closeCompare() {
   set({ diff: null });
 }
 
-export async function compare(base: string, target: string) {
+/** Compares the files on disk with the project at commit `base`. */
+export async function compare(base: string) {
   const d = get().diff;
   if (!d) return;
   const id = ++request;
-  set({ diff: { ...d, base, target, status: "loading", error: undefined } });
+  set({ diff: { ...d, base, status: "loading", error: undefined } });
   try {
-    const [o, n] = await Promise.all([api.gitSnapshot(base), api.gitSnapshot(target)]);
+    const [o, n] = await Promise.all([api.gitSnapshot(base), api.gitSnapshot(WORKTREE)]);
     const cur = get().diff;
     if (id !== request || !cur) return;
     const trees = diffTreeDefs(o.snapshot.trees, n.snapshot.trees);
     const merged = mergeAll(trees);
     const sorted = sortTreeDiffs(trees);
     const firstChanged = sorted.find((t) => t.status !== "unchanged") ?? sorted[0];
-    const active = cur.active && merged[cur.active] ? cur.active : firstChanged ? treeKey(firstChanged) : null;
+    const keep = cur.active && merged[cur.active] && trees.find((t) => treeKey(t) === cur.active)?.status !== "unchanged";
+    const active = keep ? cur.active : firstChanged ? treeKey(firstChanged) : null;
     // Merged uids come from the parse, so a selection can't be carried over to new content.
     set({ diff: { ...cur, old: o, new: n, trees, merged, active, selection: null, status: "ready" } });
   } catch (e) {
@@ -82,21 +95,27 @@ export async function compare(base: string, target: string) {
   }
 }
 
-/** Re-reads the branches and commits offered in the pickers. */
-export async function reloadGitInfo() {
+/** Re-reads the history (after a commit, say), optionally listing more of it. */
+export async function reloadGitInfo(limit = get().diff?.historyLimit ?? HISTORY_PAGE) {
   try {
-    const git = await api.gitInfo();
+    const git = await api.gitInfo(limit);
     const d = get().diff;
-    if (d && git.available) set({ diff: { ...d, git } });
-  } catch {
-    // keep the list we have
+    if (d && git.available) set({ diff: { ...d, git, historyLimit: limit } });
+  } catch (e) {
+    toast(`Couldn't read the git history: ${(e as Error).message}`, "error");
   }
 }
 
-/** Called when files change on disk: a comparison with the working tree is now out of date. */
+export function showMoreHistory() {
+  void reloadGitInfo((get().diff?.historyLimit ?? HISTORY_PAGE) + HISTORY_PAGE);
+}
+
+/** Called when files change on disk: the "new" side is out of date. */
 export function refreshCompare() {
   const d = get().diff;
-  if (d && (d.base === WORKTREE || d.target === WORKTREE)) void compare(d.base, d.target);
+  if (!d) return;
+  void compare(d.base);
+  void reloadGitInfo();
 }
 
 export function showDiffTree(key: string, selection: string | null = null) {

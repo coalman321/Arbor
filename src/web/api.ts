@@ -40,7 +40,7 @@ export const api = {
   openProject: (path: string) => call<ProjectSnapshot>("POST", "/api/project/open", { path }),
   createProject: (path: string) => call<ProjectSnapshot>("POST", "/api/project/create", { path }),
   forgetRecent: (path: string) => call<WorkspaceInfo>("POST", "/api/recent/forget", { path }),
-  gitInfo: () => call<GitInfo>("GET", "/api/git/revs"),
+  gitInfo: (limit?: number) => call<GitInfo>("GET", `/api/git/revs${limit ? `?limit=${limit}` : ""}`),
   gitSnapshot: (rev: string) => call<RevSnapshot>("GET", `/api/git/snapshot?rev=${encodeURIComponent(rev)}`),
 };
 

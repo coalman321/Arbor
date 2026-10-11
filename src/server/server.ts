@@ -122,7 +122,8 @@ export function startServer({ workspace, host, port, loadStatic, vite }: ServerO
       }
       case "GET /api/git/revs": {
         const repo = await proj().git();
-        return sendJson(res, 200, repo ? await repo.info() : { available: false, reason: "This project is not in a git repository" });
+        const limit = Number(url.searchParams.get("limit")) || undefined;
+        return sendJson(res, 200, repo ? await repo.info(limit) : { available: false, reason: "This project is not in a git repository" });
       }
       case "GET /api/git/snapshot": {
         const repo = await proj().git();

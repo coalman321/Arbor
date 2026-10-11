@@ -7,7 +7,8 @@ import { posix } from "node:path";
 import { WORKTREE, type GitCommit, type GitInfo, type ProjectSnapshot, type RevSnapshot } from "../shared/model.ts";
 import { ProjectError, type Project, type ProjectSource } from "./project.ts";
 
-const MAX_COMMITS = 200;
+const DEFAULT_COMMITS = 200;
+const MAX_COMMITS = 5000;
 const CACHE_SIZE = 16;
 
 function git(cwd: string, args: string[]): Promise<string> {
@@ -49,14 +50,17 @@ export class GitRepo {
     }
   }
 
-  async info(): Promise<GitInfo> {
+  async info(limit = DEFAULT_COMMITS): Promise<GitInfo> {
     const manifest = await this.project.manifest();
     const paths = ["--", manifest.trees, manifest.nodes];
-    const [branch, refs, log, status] = await Promise.all([
+    const n = Math.max(1, Math.min(MAX_COMMITS, Math.floor(limit) || DEFAULT_COMMITS));
+    const [branch, head, refs, log, status] = await Promise.all([
       this.run(["symbolic-ref", "--quiet", "--short", "HEAD"]).catch(() => ""),
+      this.run(["rev-parse", "--verify", "--quiet", "HEAD"]).catch(() => ""),
       this.run(["for-each-ref", "--format=%(refname)", "refs/heads", "refs/tags"]),
-      // An empty repository has no HEAD to log.
-      this.run(["log", `-n${MAX_COMMITS}`, "--format=%H%x1f%h%x1f%an%x1f%aI%x1f%s%x1e", "HEAD", ...paths]).catch(() => ""),
+      // One extra tells whether there are more. --parents rewrites parents to commits that touched
+      // the paths, so the graph stays connected. An empty repository has no HEAD to log.
+      this.run(["log", `-n${n + 1}`, "--topo-order", "--parents", "--decorate=short", "--format=%H%x1f%P%x1f%h%x1f%an%x1f%aI%x1f%D%x1f%s%x1e", "HEAD", ...paths]).catch(() => ""),
       this.run(["status", "--porcelain", "-z", ...paths]),
     ]);
     const names = refs.split("\n").filter(Boolean);
@@ -65,15 +69,27 @@ export class GitRepo {
       .map((r) => r.trim())
       .filter(Boolean)
       .map((r) => {
-        const [sha, short, author, date, subject] = r.split("\x1f");
-        return { sha, short, author, date, subject };
+        const [sha, parents, short, author, date, refs, subject] = r.split("\x1f");
+        return {
+          sha,
+          short,
+          author,
+          date,
+          subject,
+          parents: parents.split(" ").filter(Boolean),
+          refs: refs.split(", ").filter(Boolean),
+        };
       });
+    const more = commits.length > n;
+    if (more) commits.length = n;
     return {
       available: true,
       branch: branch.trim() || null,
+      head: head.trim() || null,
       branches: names.filter((n) => n.startsWith("refs/heads/")).map((n) => n.slice("refs/heads/".length)),
       tags: names.filter((n) => n.startsWith("refs/tags/")).map((n) => n.slice("refs/tags/".length)),
       commits,
+      more,
       dirty: status.length > 0,
     };
   }

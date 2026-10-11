@@ -13,7 +13,7 @@ import {
   type EdgeProps,
 } from "@xyflow/react";
 import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { findParent, nodeLabel, WORKTREE, type BTNode, type NodeModel } from "../../shared/model.ts";
+import { findParent, nodeLabel, type BTNode, type NodeModel } from "../../shared/model.ts";
 import type { TreeDefDiff, TreeDefStatus } from "../../shared/tree_diff.ts";
 import { modelFor } from "../../shared/validate.ts";
 import {
@@ -21,6 +21,7 @@ import {
   compare,
   mergedModels,
   reloadGitInfo,
+  showMoreHistory,
   resolveDiffPath,
   showDiffTree,
   sortTreeDiffs,
@@ -30,6 +31,7 @@ import {
   type GitRevs,
 } from "../diff.ts";
 import { diffLines, treeKey, type Mark, type MarkKind, type MergedTree } from "../diff_view.ts";
+import { layoutGraph, type GraphRow } from "../git_graph.ts";
 import { categoryOf, layoutTree } from "../layout.ts";
 import { select, useStore } from "../store.ts";
 import { BTNodeView, FrameView, WindowView, type BTFlowNode } from "./BTNodeView.tsx";
@@ -81,96 +83,136 @@ function ago(iso: string): string {
   return `${n} ${name}${n === 1 ? "" : "s"} ago`;
 }
 
-/** How a revision is shown: a title, and a muted detail line. */
-function describeRev(rev: string, git: GitRevs): { title: string; detail: string } {
-  if (rev === WORKTREE) return { title: "Working tree", detail: "files on disk" };
-  const c = git.commits.find((c) => c.sha === rev || c.short === rev);
-  if (c) return { title: c.subject, detail: `${c.short} · ${c.author} · ${ago(c.date)}` };
-  if (rev === git.branch) return { title: rev, detail: "current branch" };
-  if (git.branches.includes(rev)) return { title: rev, detail: "branch" };
-  if (git.tags.includes(rev)) return { title: rev, detail: "tag" };
-  return { title: rev, detail: "revision" };
+type RefKind = "head" | "branch" | "tag" | "remote";
+
+/** git log's decorations as labels: "HEAD -> main" is the checked-out branch; "tag: v1" a tag. */
+function refLabels(refs: string[], git: GitRevs): { text: string; kind: RefKind }[] {
+  const out: { text: string; kind: RefKind }[] = [];
+  for (const r of refs) {
+    if (r.startsWith("HEAD -> ")) out.push({ text: r.slice("HEAD -> ".length), kind: "head" });
+    else if (r === "HEAD") out.push({ text: "HEAD", kind: "head" });
+    else if (r.startsWith("tag: ")) out.push({ text: r.slice("tag: ".length), kind: "tag" });
+    else if (r.endsWith("/HEAD")) continue;
+    else out.push({ text: r, kind: git.branches.includes(r) ? "branch" : "remote" });
+  }
+  // A remote branch at the same commit as its local one ("origin/x" next to "x") adds nothing.
+  const local = new Set(out.filter((l) => l.kind !== "remote" && l.kind !== "tag").map((l) => l.text));
+  return out.filter((l) => l.kind !== "remote" || !local.has(l.text.slice(l.text.indexOf("/") + 1)));
 }
 
-interface RevOption {
-  rev: string;
-  title: string;
-  detail: string;
+const LANE_W = 14;
+const ROW_H = 42;
+const GRAPH_PAD = 10;
+const LANE_COLORS = 6;
+
+const laneX = (lane: number) => GRAPH_PAD + lane * LANE_W;
+
+/** A line from (x1, y1) down to (x2, y2): straight, or an S-curve when it changes lanes. */
+function segmentPath(x1: number, y1: number, x2: number, y2: number): string {
+  if (x1 === x2) return `M ${x1} ${y1} L ${x2} ${y2}`;
+  const ym = (y1 + y2) / 2;
+  return `M ${x1} ${y1} C ${x1} ${ym}, ${x2} ${ym}, ${x2} ${y2}`;
 }
 
-/** A searchable list of the working tree, branches, tags, and recent commits; or any typed revision. */
-function RevPicker({ label, value, onChange }: { label: string; value: string; onChange: (rev: string) => void }) {
-  const git = useStore((s) => s.diff!.git);
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const down = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setOpen(false);
-    window.addEventListener("mousedown", down);
-    return () => window.removeEventListener("mousedown", down);
-  }, [open]);
-
-  const options = useMemo(() => {
-    const all: RevOption[] = [
-      { rev: WORKTREE, title: "Working tree", detail: "files on disk" },
-      ...git.branches.map((b) => ({ rev: b, title: b, detail: b === git.branch ? "current branch" : "branch" })),
-      ...git.tags.map((t) => ({ rev: t, title: t, detail: "tag" })),
-      ...git.commits.map((c) => ({ rev: c.sha, title: c.subject, detail: `${c.short} · ${c.author} · ${ago(c.date)}` })),
-    ];
-    const q = query.trim().toLowerCase();
-    const hits = q ? all.filter((o) => `${o.title} ${o.detail} ${o.rev}`.toLowerCase().includes(q)) : all;
-    // A typed name or commit id that's already in the list doesn't need a "Use" entry of its own.
-    const exact = all.some((o) => o.rev === query.trim() || (/^[0-9a-f]{4,}$/i.test(query.trim()) && o.rev.startsWith(query.trim())));
-    return q && !exact ? [{ rev: query.trim(), title: `Use “${query.trim()}”`, detail: "any branch, tag, or commit" }, ...hits] : hits;
-  }, [git, query]);
-
-  const pick = (rev: string) => {
-    setOpen(false);
-    setQuery("");
-    if (rev !== value) onChange(rev);
-  };
-  const current = describeRev(value, git);
+/** One row of the history graph: the lines through it and the commit's dot. */
+function GraphCell({ row, width, head, selected, joinAbove }: { row: GraphRow; width: number; head: boolean; selected: boolean; joinAbove: boolean }) {
+  const mid = ROW_H / 2;
+  const x = laneX(row.lane);
   return (
-    <div className="rev-picker" ref={ref}>
-      <span className="rev-picker-label">{label}</span>
-      <button
-        className={`rev-picker-button ${open ? "on" : ""}`}
-        onClick={() => {
-          if (!open) void reloadGitInfo();
-          setOpen(!open);
-        }}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        title={value === WORKTREE ? "The tree files as saved on disk" : value}
-      >
-        <span className="rev-title">{current.title}</span>
-        <span className="rev-detail muted small-text">{current.detail}</span>
-      </button>
-      {open && (
-        <div className="popover rev-popover">
-          <input
-            autoFocus
-            placeholder="Search, or type a branch, tag, or commit…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && options[0]) pick(options[0].rev);
-              if (e.key === "Escape") setOpen(false);
-            }}
-          />
-          <div className="rev-options" role="listbox">
-            {options.map((o) => (
-              <button key={`${o.detail}:${o.rev}`} role="option" aria-selected={o.rev === value} className={`rev-option ${o.rev === value ? "on" : ""}`} onClick={() => pick(o.rev)}>
-                <span className="rev-title">{o.title}</span>
-                <span className="rev-detail muted small-text">{o.detail}</span>
-              </button>
-            ))}
-            {options.length === 0 && <p className="muted pad">Nothing matches.</p>}
+    <svg className="graph-cell" width={GRAPH_PAD * 2 + (width - 1) * LANE_W} height={ROW_H} aria-hidden>
+      {joinAbove && <path d={segmentPath(x, 0, x, mid)} className="graph-line graph-join" />}
+      {row.top.map((s, i) => (
+        <path key={`t${i}`} d={segmentPath(laneX(s.from), 0, laneX(s.to), mid)} className={`graph-line lane-${s.color % LANE_COLORS}`} />
+      ))}
+      {row.bottom.map((s, i) => (
+        <path key={`b${i}`} d={segmentPath(laneX(s.from), mid, laneX(s.to), ROW_H)} className={`graph-line lane-${s.color % LANE_COLORS}`} />
+      ))}
+      <circle cx={x} cy={mid} r={selected ? 5.5 : 4} className={`graph-dot lane-${row.lane % LANE_COLORS} ${head ? "head" : ""} ${selected ? "selected" : ""}`} />
+    </svg>
+  );
+}
+
+/**
+ * The checkout's history as a graph, like VS Code's. Clicking a commit compares the current files
+ * with the project as it was then. A filter hides the graph, since its lines only make sense whole.
+ */
+function HistoryPanel() {
+  const d = useStore((s) => s.diff!);
+  const { git, base } = d;
+  const graph = useMemo(() => layoutGraph(git.commits), [git.commits]);
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const rows = git.commits
+    .map((c, i) => ({ c, row: graph.rows[i] }))
+    .filter(({ c }) => !q || c.sha.startsWith(q) || `${c.subject} ${c.author} ${c.refs.join(" ")}`.toLowerCase().includes(q));
+  const width = Math.max(1, graph.width);
+
+  return (
+    <section className="panel history-panel">
+      <header className="panel-header">
+        <span>History</span>
+        <button className="icon-button" onClick={() => void reloadGitInfo()} title="Reload the history">
+          ↻
+        </button>
+      </header>
+      <div className="palette-search">
+        <input placeholder="Filter commits…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Filter commits" />
+      </div>
+      <div className="panel-body history-body" role="listbox" aria-label="Version to compare your files with">
+        {!q && (
+          <div className="history-row current" title="Your tree files as saved on disk: always the new side of the comparison">
+            <svg className="graph-cell" width={GRAPH_PAD * 2 + (width - 1) * LANE_W} height={ROW_H} aria-hidden>
+              {git.commits.length > 0 && <path d={segmentPath(laneX(0), ROW_H / 2, laneX(0), ROW_H)} className="graph-line graph-join" />}
+              <circle cx={laneX(0)} cy={ROW_H / 2} r={4.5} className="graph-dot current" />
+            </svg>
+            <div className="history-text">
+              <div className="history-subject">
+                Current files <span className="side-chip new">new</span>
+              </div>
+              <div className="history-detail muted small-text">on disk{git.dirty ? " · uncommitted changes" : ""}</div>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+        {rows.map(({ c, row }, i) => {
+          const selected = c.sha === base;
+          const labels = refLabels(c.refs, git);
+          return (
+            <div
+              key={c.sha}
+              role="option"
+              aria-selected={selected}
+              className={`history-row ${selected ? "selected" : ""}`}
+              onClick={() => !selected && void compare(c.sha)}
+              title={`${c.subject}\n${c.short} · ${c.author} · ${new Date(c.date).toLocaleString()}\n\nClick to compare your current files with this version`}
+            >
+              {!q && <GraphCell row={row} width={width} head={c.sha === git.head} selected={selected} joinAbove={i === 0} />}
+              <div className="history-text">
+                <div className="history-subject">
+                  <span className="history-message">{c.subject}</span>
+                  {labels.map((l) => (
+                    <span key={l.text} className={`ref-chip ${l.kind}`} title={l.kind === "head" ? `${l.text} (checked out)` : l.text}>
+                      {l.text}
+                    </span>
+                  ))}
+                  {selected && <span className="side-chip old">old</span>}
+                </div>
+                <div className="history-detail muted small-text">
+                  {c.short} · {c.author} · {ago(c.date)}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {q && rows.length === 0 && <p className="muted pad">No commits match.</p>}
+        {!q && git.more && (
+          <button className="link history-more" onClick={showMoreHistory}>
+            Show older commits
+          </button>
+        )}
+        {git.commits.length === 0 && <p className="muted pad">No commit has touched the trees yet.</p>}
+        {!q && !git.more && git.commits.length > 0 && <p className="muted small-text history-end">Only commits that change the trees or node spec are listed.</p>}
+      </div>
+    </section>
   );
 }
 
@@ -181,38 +223,40 @@ function CompareSidebar() {
   const sorted = useMemo(() => sortTreeDiffs(d.trees), [d.trees]);
   const changed = sorted.filter((t) => t.status !== "unchanged");
   const unchanged = sorted.filter((t) => t.status === "unchanged");
-  const usesWorktree = d.base === WORKTREE || d.target === WORKTREE;
+  const baseCommit = d.git.commits.find((c) => c.sha === d.base);
 
   return (
     <aside className="sidebar compare-sidebar">
-      <section className="panel compare-revs">
+      <section className="panel compare-summary">
         <header className="panel-header">
           <span>Compare</span>
           <button className="small" onClick={closeCompare} title="Back to editing">
             Done
           </button>
         </header>
-        <div className="compare-revs-body">
-          <RevPicker label="From" value={d.base} onChange={(r) => void compare(r, d.target)} />
-          <button className="icon-button compare-swap" onClick={() => void compare(d.target, d.base)} title="Swap the two revisions">
-            ⇅
-          </button>
-          <RevPicker label="To" value={d.target} onChange={(r) => void compare(d.base, r)} />
-          {usesWorktree && dirty > 0 && (
-            <p className="compare-note small-text">
-              The working tree is what's saved on disk: unsaved edits in {dirty} file{dirty === 1 ? "" : "s"} aren't included.
-            </p>
-          )}
+        <div className="compare-direction">
+          <div title={baseCommit ? `${baseCommit.subject} (${baseCommit.short})` : d.base}>
+            <span className="side-chip old">old</span> {baseCommit?.subject ?? d.old?.label ?? d.base.slice(0, 7)}{" "}
+            <span className="muted small-text">{baseCommit?.short}</span>
+          </div>
+          <div>
+            <span className="side-chip new">new</span> Current files
+          </div>
         </div>
+        {dirty > 0 && (
+          <p className="compare-note small-text">
+            “Current files” means what's saved on disk: unsaved edits in {dirty} file{dirty === 1 ? "" : "s"} aren't included.
+          </p>
+        )}
       </section>
       <section className="panel compare-trees">
         <header className="panel-header">
           <span>{d.status === "ready" ? `${changed.length} tree${changed.length === 1 ? "" : "s"} changed` : "Trees"}</span>
         </header>
         <div className="panel-body">
-          {d.status === "loading" && <p className="muted pad">Reading both versions…</p>}
+          {d.status === "loading" && d.trees.length === 0 && <p className="muted pad">Reading both versions…</p>}
           {d.status === "error" && <p className="pad compare-error">{d.error}</p>}
-          {d.status === "ready" && changed.length === 0 && <p className="muted pad">The trees are the same in both versions.</p>}
+          {d.status === "ready" && changed.length === 0 && <p className="muted pad">Your trees are the same as in this version.</p>}
           {changed.map((t) => (
             <TreeRow key={treeKey(t)} t={t} active={d.active === treeKey(t)} />
           ))}
@@ -224,6 +268,7 @@ function CompareSidebar() {
           {showUnchanged && unchanged.map((t) => <TreeRow key={treeKey(t)} t={t} active={d.active === treeKey(t)} />)}
         </div>
       </section>
+      <HistoryPanel />
     </aside>
   );
 }

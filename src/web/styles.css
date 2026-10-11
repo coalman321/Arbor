@@ -2217,78 +2217,180 @@ body.resizing-row * {
 }
 
 /* Sidebar */
-.compare-revs {
+.compare-summary {
   border-bottom: 1px solid var(--border);
 }
-.compare-revs-body {
+.compare-direction {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
   padding: 0 10px 10px;
 }
-.rev-picker {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.compare-direction > div {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.rev-picker-label {
-  font-size: 11px;
+.side-chip {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 5px;
+  margin-right: 2px;
+  vertical-align: 1px;
+  color: #fff;
+}
+.side-chip.old {
+  background: var(--diff-del);
+}
+.side-chip.new {
+  background: var(--diff-add);
+}
+
+/* History graph, after VS Code's source control graph. */
+:root {
+  --lane-0: #2563eb;
+  --lane-1: #db2777;
+  --lane-2: #059669;
+  --lane-3: #d97706;
+  --lane-4: #7c3aed;
+  --lane-5: #0891b2;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --lane-0: #60a5fa;
+    --lane-1: #f472b6;
+    --lane-2: #34d399;
+    --lane-3: #fbbf24;
+    --lane-4: #a78bfa;
+    --lane-5: #22d3ee;
+  }
+}
+.history-panel {
+  flex: 1;
+}
+.history-body {
+  padding: 0 0 8px;
+}
+.history-row {
+  display: flex;
+  align-items: center;
+  height: 42px;
+  padding-right: 8px;
+  cursor: pointer;
+}
+.history-row:hover {
+  background: var(--hover);
+}
+.history-row.selected {
+  background: color-mix(in srgb, var(--diff-del) 12%, transparent);
+  cursor: default;
+}
+.history-row.current {
+  cursor: default;
+  background: color-mix(in srgb, var(--diff-add) 9%, transparent);
+}
+.graph-cell {
+  flex: none;
+  display: block;
+}
+.history-text {
+  min-width: 0;
+  flex: 1;
+  padding-left: 2px;
+}
+.history-row:not(:has(.graph-cell)) .history-text {
+  padding-left: 12px;
+}
+.history-subject {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  white-space: nowrap;
+}
+/* The message keeps at least half the row; branch and tag chips shrink first. */
+.history-message {
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: min(50%, max-content);
+}
+.history-detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ref-chip {
+  flex: 0 1 auto;
+  min-width: 28px;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 0 5px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
   color: var(--muted);
 }
-.rev-picker-button,
-.rev-option {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 1px;
-  width: 100%;
-  text-align: left;
-  white-space: normal;
-  min-width: 0;
+.ref-chip.head {
+  color: var(--accent);
+  border-color: var(--accent);
 }
-.rev-picker-button {
-  padding: 5px 8px;
+.ref-chip.tag {
+  color: var(--lane-3);
+  border-color: color-mix(in srgb, var(--lane-3) 60%, transparent);
 }
-.rev-title {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 550;
+.ref-chip.remote {
+  opacity: 0.8;
 }
-.rev-detail {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.graph-line {
+  fill: none;
+  stroke-width: 2;
+  stroke: var(--muted);
 }
-.compare-swap {
-  align-self: center;
-  margin: 2px 0 -2px;
+.graph-join {
+  stroke: var(--muted);
+  stroke-dasharray: 2 3;
 }
-.rev-popover {
-  left: 0;
-  right: 0;
-  gap: 4px;
-  max-height: min(420px, 60vh);
+.graph-dot {
+  stroke: var(--panel);
+  stroke-width: 2;
 }
-.rev-popover input {
-  margin: 2px;
+.graph-dot.head {
+  stroke: var(--text);
 }
-.rev-options {
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
+.graph-dot.selected {
+  fill: var(--diff-del) !important;
+  stroke: var(--panel);
 }
-.rev-option {
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  padding: 5px 8px;
+.graph-dot.current {
+  fill: var(--panel);
+  stroke: var(--diff-add);
+  stroke-width: 2.5;
 }
-.rev-option.on {
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
+.graph-line.lane-0 { stroke: var(--lane-0); }
+.graph-line.lane-1 { stroke: var(--lane-1); }
+.graph-line.lane-2 { stroke: var(--lane-2); }
+.graph-line.lane-3 { stroke: var(--lane-3); }
+.graph-line.lane-4 { stroke: var(--lane-4); }
+.graph-line.lane-5 { stroke: var(--lane-5); }
+.graph-dot.lane-0 { fill: var(--lane-0); }
+.graph-dot.lane-1 { fill: var(--lane-1); }
+.graph-dot.lane-2 { fill: var(--lane-2); }
+.graph-dot.lane-3 { fill: var(--lane-3); }
+.graph-dot.lane-4 { fill: var(--lane-4); }
+.graph-dot.lane-5 { fill: var(--lane-5); }
+.history-more {
+  margin: 8px 12px;
+  font-size: 12px;
+}
+.history-end {
+  margin: 8px 12px;
 }
 .compare-note {
   margin: 6px 0 0;
@@ -2298,7 +2400,9 @@ body.resizing-row * {
   color: var(--text);
 }
 .compare-trees {
-  flex: 1;
+  flex: 0 1 auto;
+  max-height: 40%;
+  border-bottom: 1px solid var(--border);
 }
 .compare-error {
   color: var(--error);
