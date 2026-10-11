@@ -6,9 +6,9 @@ A local editor and live viewer for [BehaviorTree.CPP](https://www.behaviortree.d
 
 ## Quick start
 
-The desktop app for Linux, macOS and Windows (x64 and arm64) is attached to each [GitHub release](https://github.com/coalman321/Arbor/releases): a `.dmg` for macOS, an installer `.exe` for Windows, and an `.AppImage` for Linux. It starts on a screen for opening or creating a project, and quitting it stops everything. The app isn't notarized by Apple yet, so the first time you open it macOS says it can't verify it: click **Done**, then go to **System Settings → Privacy & Security** and click **Open Anyway** next to the message about Arbor. Windows SmartScreen may also warn; click **More info → Run anyway**. To build it yourself, see [Building the desktop app](#building-the-desktop-app).
+The desktop app for Linux, macOS and Windows (x64 and arm64) is attached to each [GitHub release](https://github.com/coalman321/Arbor/releases): a `.dmg` for macOS, an installer `.exe` for Windows, and an `.AppImage` for Linux. 
 
-To embed the editor in another Node application, `npm run bundle` writes a self-contained library to `build/lib/arbor.mjs` (see [src/server/index.ts](src/server/index.ts) for how to start it).
+To open on Macos go to **System Settings → Privacy & Security** and click **Open Anyway** next to the message about Arbor. Windows SmartScreen may also warn; click **More info → Run anyway**.
 
 To run from source, you need Node 22 or newer.
 
@@ -16,11 +16,9 @@ To run from source, you need Node 22 or newer.
 git clone https://github.com/coalman321/Arbor.git
 cd Arbor
 npm ci
-npm run build                                          # bundles the UI into dist/
-npm start -- --project examples/demo_project           # http://127.0.0.1:8080
+npm run build   # bundles the UI into dist/
+npm start       # http://127.0.0.1:8080
 ```
-
-To get an `arbor` command on your `PATH`, run `npm link` in the checkout. After that, `arbor --project DIR` and `arbor init DIR` work from any directory.
 
 Try the live view without a robot by running the mock robot, which simulates the demo project:
 
@@ -35,7 +33,6 @@ Other commands:
 | | |
 |---|---|
 | `npm run dev` | Backend plus Vite with hot reload, on the demo project |
-| `npm start -- --project DIR --port 8080 --host 127.0.0.1` | Serve a project |
 | `npm start` | Start with no project: the browser shows recent projects, **New project…** and **Open project…** |
 | `npm start -- --root DIR` | Only let the UI browse, open and create projects under `DIR` (the default when `--host` isn't loopback is the current directory) |
 | `npm start -- init DIR` | Create an empty project |
@@ -60,8 +57,6 @@ npm run build:desktop    # package an installer into release/
 | macOS | `release/Arbor-<version>-mac-<arch>.dmg`, plus the unpacked `Arbor.app` in `release/mac-<arch>/` |
 | Windows | `release/Arbor-<version>-win-<arch>.exe` (NSIS installer) |
 | Linux | `release/Arbor-<version>-linux-<arch>.AppImage` |
-
-To build for the other CPU architecture, pass it through to electron-builder, for example `npm run build:desktop -- --x64` on an Apple Silicon Mac. Build each operating system on that operating system; the [release workflow](.github/workflows/release.yml) does this on one runner per platform and architecture.
 
 The packaging settings (app ID, targets, icons from `resources/`) are in the `build` field of [package.json](package.json).
 
@@ -102,7 +97,7 @@ factory.registerNodeType<MoveTo>("MoveTo");
 std::ofstream("path/to/project/nodes.xml") << BT::writeTreeNodesModelXML(factory);  // builtins left out
 ```
 
-The editor reads the spec directly. If the file changes on disk (say, a build regenerates it), the palette and validation update right away. Builtin nodes (`Sequence`, `RetryUntilSuccessful`, `Script`, ...) are built into the editor and match BT.CPP 4.9. You can also add or edit node types from the editor ("+ Node type"), which is handy for designing a tree before the C++ exists. If `nodes.xml` is generated, make the same change in code too, or the next regeneration overwrites it.
+The editor reads the spec directly. Builtin nodes (`Sequence`, `RetryUntilSuccessful`, `Script`, ...) are built into the editor and match BT.CPP 4.9. You can also add or edit node types from the editor ("+ Node type"), which is handy for designing a tree before the C++ exists.
 
 ### Tree files
 
