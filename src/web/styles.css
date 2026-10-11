@@ -340,6 +340,16 @@ hr {
 .setting input {
   margin-top: 2px;
 }
+.setting-link {
+  text-align: left;
+  border: none;
+  background: none;
+  padding: 6px 10px;
+  border-radius: 5px;
+}
+.setting-link:hover {
+  background: var(--hover);
+}
 .setting-segmented {
   display: flex;
   gap: 4px;
@@ -1697,6 +1707,35 @@ button.brand:hover {
 .menu-footer {
   padding: 4px 10px;
 }
+.modal:has(.licenses) {
+  width: min(560px, calc(100vw - 32px));
+}
+.licenses {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.licenses section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.licenses h4 {
+  margin: 0;
+}
+.licenses summary {
+  cursor: pointer;
+}
+.license-text {
+  max-height: 40vh;
+  overflow: auto;
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 11px;
+  white-space: pre-wrap;
+}
 .modal:has(.browse) {
   width: min(640px, calc(100vw - 32px));
 }
@@ -2013,4 +2052,520 @@ body.resizing-row * {
 .toolbar {
   flex-wrap: wrap;
   row-gap: 6px;
+}
+
+/* ---------- compare mode ---------- */
+
+:root {
+  --diff-add: #15803d;
+  --diff-del: #dc2626;
+  --diff-mod: #d97706;
+  --diff-move: #0284c7;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --diff-add: #4ade80;
+    --diff-del: #f87171;
+    --diff-mod: #fbbf24;
+    --diff-move: #38bdf8;
+  }
+}
+.k-added,
+.st-added {
+  --d: var(--diff-add);
+}
+.k-removed,
+.st-removed {
+  --d: var(--diff-del);
+}
+.k-changed,
+.st-changed {
+  --d: var(--diff-mod);
+}
+.k-moved,
+.k-moved-away,
+.st-renamed {
+  --d: var(--diff-move);
+}
+.k-same,
+.st-unchanged {
+  --d: var(--muted);
+}
+
+/* Nodes. Diff colors go on the border and background only, so selection still shows. */
+.bt-node.diff-added,
+.bt-frame.diff-added {
+  --d: var(--diff-add);
+}
+.bt-node.diff-removed,
+.bt-frame.diff-removed {
+  --d: var(--diff-del);
+}
+.bt-node.diff-changed,
+.bt-frame.diff-changed {
+  --d: var(--diff-mod);
+}
+.bt-node.diff-moved,
+.bt-node.diff-moved-away,
+.bt-frame.diff-moved {
+  --d: var(--diff-move);
+}
+.bt-node.diff-inner {
+  --d: var(--diff-mod);
+}
+.bt-node:is(.diff-added, .diff-removed, .diff-changed, .diff-moved, .diff-moved-away, .diff-inner) {
+  border-color: var(--d);
+  border-width: 2px;
+  border-left-width: 4px;
+  border-left-color: var(--c);
+  background: color-mix(in srgb, var(--d) 7%, var(--node-bg));
+}
+.bt-node.diff-removed {
+  opacity: 0.7;
+  border-style: dashed;
+  border-left-style: solid;
+}
+.bt-node.diff-removed .bt-node-title,
+.bt-node.diff-removed .bt-node-name {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--diff-del) 70%, transparent);
+}
+/* Where a node used to be: a faint outline that points at its new place. */
+.bt-node.diff-moved-away {
+  opacity: 0.5;
+  border-style: dotted;
+  border-left-style: dotted;
+  border-left-color: var(--d);
+  background: transparent;
+  box-shadow: none;
+}
+.bt-frame:is(.diff-added, .diff-removed, .diff-changed, .diff-moved) {
+  border-color: var(--d);
+  border-width: 2px;
+}
+.bt-frame:is(.diff-added, .diff-removed, .diff-changed, .diff-moved) > .bt-frame-header {
+  background: color-mix(in srgb, var(--d) 12%, var(--node-bg));
+}
+.bt-frame.diff-removed {
+  opacity: 0.75;
+}
+.bt-node-diff {
+  position: absolute;
+  top: -9px;
+  left: 10px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 6px;
+  color: #fff;
+  background: var(--d, var(--muted));
+  white-space: nowrap;
+  pointer-events: none;
+}
+.bt-frame-header .bt-node-diff {
+  top: 4px;
+  left: auto;
+  right: 8px;
+}
+/* A node that only gained or lost a wrapper keeps a quiet tag and no color. */
+.bt-node:not(.diff-added, .diff-removed, .diff-changed, .diff-moved, .diff-moved-away, .diff-inner) .bt-node-diff {
+  background: var(--panel-2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+/* Port lines: old value struck through, then the new one. */
+.bt-node-port.diff-changed,
+.bt-node-port.diff-added,
+.bt-node-port.diff-removed {
+  margin: 0 -6px;
+  padding: 0 6px;
+  border-radius: 3px;
+}
+.bt-node-port.diff-changed {
+  background: color-mix(in srgb, var(--diff-mod) 14%, transparent);
+}
+.bt-node-port.diff-added {
+  background: color-mix(in srgb, var(--diff-add) 14%, transparent);
+}
+.bt-node-port.diff-removed {
+  background: color-mix(in srgb, var(--diff-del) 12%, transparent);
+}
+.bt-node-port .v.old,
+.bt-node-port.diff-removed .v,
+.bt-node-port.diff-removed .k {
+  text-decoration: line-through;
+  color: var(--diff-del);
+}
+.bt-node-port .v.old::after {
+  content: " →";
+  display: inline-block;
+  margin-left: 2px;
+  color: var(--muted);
+  text-decoration: none;
+}
+.bt-node-port.diff-added .v,
+.bt-node-port.diff-changed .v:not(.old) {
+  color: var(--diff-add);
+}
+
+/* Folded conditions */
+.cond-token.diff-added {
+  background: color-mix(in srgb, var(--diff-add) 18%, transparent);
+}
+.cond-token.diff-removed {
+  background: color-mix(in srgb, var(--diff-del) 15%, transparent);
+  text-decoration: line-through;
+}
+.cond-token.diff-changed,
+.cond-token.diff-edited {
+  background: color-mix(in srgb, var(--diff-mod) 20%, transparent);
+}
+.cond-token.diff-moved {
+  background: color-mix(in srgb, var(--diff-move) 18%, transparent);
+}
+.cond-token.diff-moved-away {
+  opacity: 0.55;
+  text-decoration: line-through dotted;
+}
+
+/* Edges into added / removed / moved nodes */
+.bt-edge.diff-added {
+  stroke: var(--diff-add) !important;
+  stroke-width: 2;
+}
+.bt-edge.diff-removed {
+  stroke: var(--diff-del) !important;
+  stroke-dasharray: 5 4;
+}
+.bt-edge.diff-moved {
+  stroke: var(--diff-move) !important;
+  stroke-width: 2;
+}
+.bt-edge.diff-moved-away {
+  stroke: var(--diff-move) !important;
+  stroke-dasharray: 2 4;
+  opacity: 0.6;
+}
+
+.compare-canvas.is-loading .react-flow__renderer {
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+/* Sidebar */
+.compare-summary {
+  border-bottom: 1px solid var(--border);
+}
+.compare-direction {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 10px 10px;
+}
+.compare-direction > div {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.side-chip {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 5px;
+  margin-right: 2px;
+  vertical-align: 1px;
+  color: #fff;
+}
+.side-chip.old {
+  background: var(--diff-del);
+}
+.side-chip.new {
+  background: var(--diff-add);
+}
+
+/* History graph, after VS Code's source control graph. */
+:root {
+  --lane-0: #2563eb;
+  --lane-1: #db2777;
+  --lane-2: #059669;
+  --lane-3: #d97706;
+  --lane-4: #7c3aed;
+  --lane-5: #0891b2;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --lane-0: #60a5fa;
+    --lane-1: #f472b6;
+    --lane-2: #34d399;
+    --lane-3: #fbbf24;
+    --lane-4: #a78bfa;
+    --lane-5: #22d3ee;
+  }
+}
+.history-panel {
+  flex: 1;
+}
+.history-body {
+  padding: 0 0 8px;
+}
+.history-row {
+  display: flex;
+  align-items: center;
+  height: 42px;
+  padding-right: 8px;
+  cursor: pointer;
+}
+.history-row:hover {
+  background: var(--hover);
+}
+.history-row.selected {
+  background: color-mix(in srgb, var(--diff-del) 12%, transparent);
+  cursor: default;
+}
+.history-row.current {
+  cursor: default;
+  background: color-mix(in srgb, var(--diff-add) 9%, transparent);
+}
+.graph-cell {
+  flex: none;
+  display: block;
+}
+.history-text {
+  min-width: 0;
+  flex: 1;
+  padding-left: 2px;
+}
+.history-row:not(:has(.graph-cell)) .history-text {
+  padding-left: 12px;
+}
+.history-subject {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  white-space: nowrap;
+}
+/* The message keeps at least half the row; branch and tag chips shrink first. */
+.history-message {
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: min(50%, max-content);
+}
+.history-detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ref-chip {
+  flex: 0 1 auto;
+  min-width: 28px;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 0 5px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.ref-chip.head {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.ref-chip.tag {
+  color: var(--lane-3);
+  border-color: color-mix(in srgb, var(--lane-3) 60%, transparent);
+}
+.ref-chip.remote {
+  opacity: 0.8;
+}
+.graph-line {
+  fill: none;
+  stroke-width: 2;
+  stroke: var(--muted);
+}
+.graph-join {
+  stroke: var(--muted);
+  stroke-dasharray: 2 3;
+}
+.graph-dot {
+  stroke: var(--panel);
+  stroke-width: 2;
+}
+.graph-dot.head {
+  stroke: var(--text);
+}
+.graph-dot.selected {
+  fill: var(--diff-del) !important;
+  stroke: var(--panel);
+}
+.graph-dot.current {
+  fill: var(--panel);
+  stroke: var(--diff-add);
+  stroke-width: 2.5;
+}
+.graph-line.lane-0 { stroke: var(--lane-0); }
+.graph-line.lane-1 { stroke: var(--lane-1); }
+.graph-line.lane-2 { stroke: var(--lane-2); }
+.graph-line.lane-3 { stroke: var(--lane-3); }
+.graph-line.lane-4 { stroke: var(--lane-4); }
+.graph-line.lane-5 { stroke: var(--lane-5); }
+.graph-dot.lane-0 { fill: var(--lane-0); }
+.graph-dot.lane-1 { fill: var(--lane-1); }
+.graph-dot.lane-2 { fill: var(--lane-2); }
+.graph-dot.lane-3 { fill: var(--lane-3); }
+.graph-dot.lane-4 { fill: var(--lane-4); }
+.graph-dot.lane-5 { fill: var(--lane-5); }
+.history-more {
+  margin: 8px 12px;
+  font-size: 12px;
+}
+.history-end {
+  margin: 8px 12px;
+}
+.compare-note {
+  margin: 6px 0 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--warning) 12%, transparent);
+  color: var(--text);
+}
+.compare-trees {
+  flex: 0 1 auto;
+  max-height: 40%;
+  border-bottom: 1px solid var(--border);
+}
+.compare-error {
+  color: var(--error);
+  white-space: pre-wrap;
+}
+.compare-tree .tree-label {
+  flex: 1;
+}
+.diff-status {
+  width: 16px;
+  flex: none;
+  text-align: center;
+  font-weight: 800;
+  color: var(--d);
+}
+.diff-count {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0 6px;
+}
+.compare-unchanged-toggle {
+  margin: 6px 12px;
+  font-size: 12px;
+}
+
+/* Bar above the canvas */
+.compare-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 33px;
+  padding: 0 10px;
+  background: var(--panel-2);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  overflow-x: auto;
+}
+.compare-bar-title {
+  font-weight: 650;
+}
+.diff-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 9px;
+  color: var(--d, var(--muted));
+  border: 1px solid color-mix(in srgb, var(--d, var(--muted)) 50%, transparent);
+  background: color-mix(in srgb, var(--d, var(--muted)) 10%, transparent);
+}
+.compare-legend {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+}
+.legend-item {
+  color: var(--d);
+  font-weight: 600;
+}
+.compare-nav {
+  align-items: center;
+}
+.compare-pos {
+  min-width: 64px;
+  text-align: center;
+}
+
+/* Details panel */
+.compare-kind {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.compare-story {
+  margin: 0;
+  line-height: 1.45;
+}
+.compare-story button {
+  margin-top: 6px;
+}
+.compare-attrs {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+.compare-attrs th {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+}
+.compare-attrs td {
+  padding: 4px 6px;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+.compare-attrs tr:not(.changed) td {
+  color: var(--muted);
+}
+.compare-attrs tr.changed {
+  background: color-mix(in srgb, var(--diff-mod) 10%, transparent);
+}
+.compare-attrs td.old {
+  color: var(--diff-del);
+  text-decoration: line-through;
+}
+.compare-attrs td.new {
+  color: var(--diff-add);
+}
+.compare-counts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+.compare-counts li {
+  color: var(--d);
+  font-weight: 600;
 }

@@ -4,7 +4,7 @@
 
 import { app, BrowserWindow, dialog, Menu, shell, type MenuItemConstructorOptions } from "electron";
 import { join } from "node:path";
-import { configDir, distLoader, startServer, Workspace, type RunningServer } from "../server/index.ts";
+import { configDir, distLoader, startServer, useBundledGit, Workspace, type RunningServer } from "../server/index.ts";
 import { isNewer, latestRelease } from "./update.ts";
 
 // The UI keeps its settings in localStorage, which belongs to the page's origin; a fixed port keeps
@@ -41,6 +41,8 @@ function setMenu() {
 
 async function start() {
   setMenu();
+  // For machines without git of their own; staged by scripts/stage_git.mjs.
+  useBundledGit(app.isPackaged ? join(process.resourcesPath, "git") : join(app.getAppPath(), "build", "git"));
   server = await listen();
   const origin = `http://127.0.0.1:${server.port}`;
   win = new BrowserWindow({

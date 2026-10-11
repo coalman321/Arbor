@@ -21,6 +21,8 @@ import { Sidebar } from "./Sidebar.tsx";
 import { ReplayBar } from "./ReplayBar.tsx";
 import { openLogFile, pause, seek, step, togglePlay } from "../replay.ts";
 import { EdgeStrip } from "./Toolbar.tsx";
+import { DiffView, onCompareKey } from "./DiffView.tsx";
+import { refreshCompare } from "../diff.ts";
 import { Tabs, Toolbar } from "./Toolbar.tsx";
 
 const mouse = { x: 300, y: 200 };
@@ -56,6 +58,8 @@ function onKeyDown(e: KeyboardEvent) {
   }
   const s = useStore.getState();
   if (isTyping(e) || s.dialog || s.picker) return;
+  // Compare mode has its own few keys; none of the editing ones apply.
+  if (s.diff) return onCompareKey(e);
   // Playback keys while a log is open.
   if (s.replay && !mod) {
     const r = s.replay;
@@ -104,7 +108,10 @@ function useFileEvents() {
       ws = new WebSocket(wsUrl("/api/events"));
       ws.onmessage = (ev) => {
         const msg = JSON.parse(ev.data as string);
-        if (msg.op === "files_changed") void reconcileWithDisk().catch((e) => toast(`Reload failed: ${e.message}`, "error"));
+        if (msg.op === "files_changed") {
+          void reconcileWithDisk().catch((e) => toast(`Reload failed: ${e.message}`, "error"));
+          refreshCompare();
+        }
         if (msg.op === "project_changed") {
           const s = useStore.getState();
           if (s.status === "ready" && msg.root === s.root) return; // our own switch
@@ -131,6 +138,7 @@ export function App() {
   const loadError = useStore((s) => s.loadError);
   const panels = useStore((s) => s.panels);
   const bottomOpen = useStore((s) => s.bottomOpen);
+  const comparing = useStore((s) => !!s.diff);
   const [sizes, setSize] = usePanelSizes();
   useFileEvents();
   useEffect(() => {
@@ -187,17 +195,23 @@ export function App() {
           className="main"
           style={{ "--sidebar-width": `${sizes.left}px`, "--inspector-width": `${sizes.right}px`, "--bottom-height": `${sizes.bottom}px` } as React.CSSProperties}
         >
-          {panels.left ? <Sidebar /> : <EdgeStrip side="left" />}
-          {panels.left && <PanelResizer edge="left" size={sizes.left} onResize={(v) => setSize("left", v)} />}
-          <div className="center">
-            <Tabs />
-            <Canvas />
-            <ReplayBar />
-            {panels.bottom && bottomOpen && <PanelResizer edge="bottom" size={sizes.bottom} onResize={(v) => setSize("bottom", v)} />}
-            {panels.bottom ? <BottomPanel /> : <EdgeStrip side="bottom" />}
-          </div>
-          {panels.right && <PanelResizer edge="right" size={sizes.right} onResize={(v) => setSize("right", v)} />}
-          {panels.right ? <Inspector /> : <EdgeStrip side="right" />}
+          {comparing ? (
+            <DiffView sizes={sizes} setSize={setSize} />
+          ) : (
+            <>
+              {panels.left ? <Sidebar /> : <EdgeStrip side="left" />}
+              {panels.left && <PanelResizer edge="left" size={sizes.left} onResize={(v) => setSize("left", v)} />}
+              <div className="center">
+                <Tabs />
+                <Canvas />
+                <ReplayBar />
+                {panels.bottom && bottomOpen && <PanelResizer edge="bottom" size={sizes.bottom} onResize={(v) => setSize("bottom", v)} />}
+                {panels.bottom ? <BottomPanel /> : <EdgeStrip side="bottom" />}
+              </div>
+              {panels.right && <PanelResizer edge="right" size={sizes.right} onResize={(v) => setSize("right", v)} />}
+              {panels.right ? <Inspector /> : <EdgeStrip side="right" />}
+            </>
+          )}
         </div>
         <ContextMenu />
         <NodePicker />

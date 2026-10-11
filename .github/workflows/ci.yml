@@ -40,6 +40,7 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run bundle
+      - run: npm run stage-git
 
       # Packages the app unpacked (no installer) to catch packaging problems before a release.
       - run: npx electron-builder --dir --publish never

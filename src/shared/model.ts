@@ -215,3 +215,66 @@ export interface BrowseResult {
   isProject: boolean;
   entries: { name: string; kind: "dir" | "xml"; isProject?: boolean }[];
 }
+
+/** The pseudo-revision for the project files as they are on disk now (saved edits only). */
+export const WORKTREE = "WORKTREE";
+
+export interface GitCommit {
+  sha: string;
+  short: string;
+  author: string;
+  /** ISO 8601 author date. */
+  date: string;
+  subject: string;
+  /** Parent commits, as rewritten for the project's paths: what the history graph connects. */
+  parents: string[];
+  /** Branches and tags pointing here ("HEAD -> main", "tag: v1.0"), as git log's %D prints them. */
+  refs: string[];
+}
+
+/** GET /api/git/revs: what can be compared. */
+export type GitInfo =
+  | { available: false; reason: string }
+  | {
+      available: true;
+      /** Current branch, or null on a detached HEAD. */
+      branch: string | null;
+      /** The checked-out commit, or null in a repository without commits. */
+      head: string | null;
+      branches: string[];
+      tags: string[];
+      /** Commits on HEAD that touched the project's trees or node spec, newest first (topological). */
+      commits: GitCommit[];
+      /** More commits exist beyond `commits` (ask again with a higher limit). */
+      more: boolean;
+      /** The trees or spec on disk differ from HEAD. */
+      dirty: boolean;
+    };
+
+/** The git the desktop app ships with, for machines without their own (GET /api/about). */
+export interface BundledGitInfo {
+  version: string;
+  /** Git's licence (GPLv2), in full. */
+  license: string;
+  /** Git's source at this version. */
+  source: string;
+  /** How this build of git was made, and the other open-source parts it includes. */
+  build: string;
+  /** Whether Arbor is using it, rather than the machine's own git. */
+  inUse: boolean;
+}
+
+/** GET /api/about: third-party software this copy of Arbor ships with. */
+export interface AboutInfo {
+  bundledGit: BundledGitInfo | null;
+}
+
+/** GET /api/git/snapshot: the project as it was at one revision. */
+export interface RevSnapshot {
+  rev: string;
+  /** The commit `rev` resolved to; null for WORKTREE. */
+  sha: string | null;
+  /** Short description for the UI ("main · 1a2b3c4", "Working tree"). */
+  label: string;
+  snapshot: ProjectSnapshot;
+}

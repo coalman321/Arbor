@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { Logo } from "./Logo.tsx";
 import { ProjectMenu } from "./ProjectUI.tsx";
 import { closeReplay } from "../replay.ts";
+import { closeCompare, openCompare } from "../diff.ts";
 import { connectLive, disconnectLive, setPaused } from "../live.ts";
 import { closeTab, localStorageSet, openTree, redo, saveAll, toggleFocus, togglePanel, undo, useStore, type Panels } from "../store.ts";
 
@@ -29,6 +30,7 @@ export function Toolbar() {
         </button>
       </div>
       <FocusToggle />
+      <CompareToggle />
       <div className="spacer" />
       <LiveControls />
       <SettingsMenu />
@@ -54,6 +56,21 @@ function FocusToggle() {
       title={focused ? "Bring the panels back (Ctrl+Shift+F)" : "Hide all panels to see just the tree (Ctrl+Shift+F)"}
     >
       {focused ? "Exit focus" : "Focus"}
+    </button>
+  );
+}
+
+/** Compare mode: the trees at two git revisions, as one tree with the differences marked. */
+function CompareToggle() {
+  const on = useStore((s) => !!s.diff);
+  return (
+    <button
+      className={on ? "on" : ""}
+      aria-pressed={on}
+      onClick={() => (on ? closeCompare() : void openCompare())}
+      title={on ? "Back to editing" : "Compare the trees between two git revisions"}
+    >
+      {on ? "Done comparing" : "Compare…"}
     </button>
   );
 }
@@ -143,6 +160,16 @@ function SettingsMenu() {
               <div className="muted small-text">Label every connection in plain words (hover a label for more)</div>
             </span>
           </label>
+          <div className="menu-section">About</div>
+          <button
+            className="setting-link"
+            onClick={() => {
+              setOpen(false);
+              useStore.setState({ dialog: { kind: "licenses" } });
+            }}
+          >
+            Open-source licences…
+          </button>
         </div>
       )}
     </div>

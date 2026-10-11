@@ -54,6 +54,8 @@ gh run watch $(gh run list --workflow release.yml --limit 1 --json databaseId -q
 
 Each of the six build jobs typechecks, runs the tests and packages its platform. The **Publish release** job runs only after all six have passed.
 
+Each app includes a copy of git for computers that don't have one, used to compare trees between revisions. `npm ci` downloads it through the `dugite` package, and `scripts/stage_git.mjs` trims it. The version comes from `package-lock.json`. To update it, run `npm update dugite`. If git's major version changes, also update `resources/licenses/git-COPYING.txt` from git's `COPYING` file.
+
 ## 5. Check the release
 
 ```bash

@@ -97,7 +97,8 @@ export type DialogState =
   | { kind: "newTree"; extractFrom?: { treeId: string; uid: string } }
   | { kind: "renameTree"; treeId: string }
   | { kind: "moveTree"; treeId: string }
-  | { kind: "nodeType"; modelId?: string; category?: NodeModel["category"] };
+  | { kind: "nodeType"; modelId?: string; category?: NodeModel["category"] }
+  | { kind: "licenses" };
 
 export interface ContextMenuState {
   x: number;
@@ -146,6 +147,8 @@ interface State {
   live: LiveState;
   /** Set while a .btlog is open for playback (see replay.ts). */
   replay: import("./replay.ts").ReplayState | null;
+  /** Set while comparing two revisions (see diff.ts); the compare view replaces the editor. */
+  diff: import("./diff.ts").DiffState | null;
   fitRequest: number;
 }
 
@@ -207,6 +210,7 @@ export const useStore = create<State>()(() => ({
   panelsBeforeFocus: null,
   live: initialLive(),
   replay: null,
+  diff: null,
   fitRequest: 0,
 }));
 
@@ -477,12 +481,14 @@ export function closeTab(id: string) {
 }
 
 export function select(path: string | null) {
-  set({ selection: path, menu: null });
+  const diff = get().diff;
+  if (diff) set({ diff: { ...diff, selection: path } });
+  else set({ selection: path, menu: null });
 }
 
 export function toggleExpanded(path: string) {
   const s = get();
-  const key = `${s.active}|${path}`;
+  const key = s.diff ? `diff:${s.diff.active}|${path}` : `${s.active}|${path}`;
   const expanded = { ...s.expanded };
   if (expanded[key]) delete expanded[key];
   else expanded[key] = true;

@@ -23,6 +23,14 @@ export interface FoldedCondition {
   part: CondPart;
 }
 
+/** A port or attribute line on a node. `old` and `change` are set when it is drawn in a diff. */
+export interface Line {
+  key: string;
+  value: string;
+  old?: string;
+  change?: "added" | "removed" | "changed";
+}
+
 export interface LayoutItem {
   path: string;
   node: BTNode;
@@ -36,7 +44,7 @@ export interface LayoutItem {
   w: number;
   h: number;
   /** Port/remap lines shown on the node. */
-  lines: { key: string; value: string }[];
+  lines: Line[];
   hiddenLines: number;
   expanded?: boolean;
   condition?: FoldedCondition;
@@ -81,7 +89,7 @@ export const CONDITION_FIRST: Record<string, readonly string[]> = {
 /** Ports shown as the node's condition rather than as a port line. */
 const CONDITION_PORT: Record<string, string> = { Precondition: "if" };
 
-export function visibleAttrs(node: BTNode): { key: string; value: string }[] {
+export function visibleAttrs(node: BTNode): Line[] {
   const condPort = CONDITION_PORT[node.type];
   return Object.entries(node.attrs)
     .filter(([k]) => !RESERVED_ATTRS.has(k) && k !== condPort)
@@ -131,11 +139,11 @@ export function conditionText(part: CondPart, nested = false): string {
 
 const COND_LINE_CHARS = 30;
 
-function measure(node: BTNode, lines: { key: string; value: string }[], shown: number, hasMore: boolean, condition?: FoldedCondition) {
+function measure(node: BTNode, lines: Line[], shown: number, hasMore: boolean, condition?: FoldedCondition) {
   const title = node.type === "SubTree" ? (node.attrs.ID ?? "SubTree") : node.type;
   const name = node.attrs.name && node.attrs.name !== title ? node.attrs.name : "";
   let chars = Math.max(title.length * 1.15 + 4, name.length);
-  for (const l of lines.slice(0, shown)) chars = Math.max(chars, (l.key.length + l.value.length + 2) * 0.95);
+  for (const l of lines.slice(0, shown)) chars = Math.max(chars, (l.key.length + l.value.length + 2 + (l.old === undefined ? 0 : l.old.length + 3)) * 0.95);
   let condHeight = 0;
   if (condition) {
     const text = `${condition.keyword} ${conditionText(condition.part)}`;
@@ -157,6 +165,8 @@ export interface LayoutOptions {
   frameDecorator?: (node: BTNode) => boolean;
   /** Describe decorators in plain words in their frame headers (and leave room for edge labels). */
   explain?: boolean;
+  /** Replaces a node's port lines (a diff shows changed attributes, with their old values). */
+  linesFor?: (node: BTNode, treeId: string) => Line[] | undefined;
 }
 
 export const WINDOW_SUFFIX = "@window";
@@ -209,7 +219,7 @@ export function layoutTree(tab: TreeDef, trees: Record<string, TreeDef>, opts: L
     childIndex: number,
   ): Box => {
     const path = joinPath(prefix, node.uid);
-    const lines = visibleAttrs(node);
+    const lines = opts.linesFor?.(node, tree.id) ?? visibleAttrs(node);
     const shown = Math.min(lines.length, MAX_LINES);
     const foldedPaths: string[] = [];
     const branchLabels = CONDITION_FIRST[node.type];
