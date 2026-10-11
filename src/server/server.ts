@@ -120,6 +120,15 @@ export function startServer({ workspace, host, port, loadStatic, vite }: ServerO
         const body = (await readBody(req)) as { models: NodeModel[] };
         return sendJson(res, 200, await proj().saveSpec(body.models));
       }
+      case "GET /api/git/revs": {
+        const repo = await proj().git();
+        return sendJson(res, 200, repo ? await repo.info() : { available: false, reason: "This project is not in a git repository" });
+      }
+      case "GET /api/git/snapshot": {
+        const repo = await proj().git();
+        if (!repo) throw new ProjectError("This project is not in a git repository", 404);
+        return sendJson(res, 200, await repo.snapshot(url.searchParams.get("rev") ?? ""));
+      }
       default:
         throw new ProjectError(`No route ${route}`, 404);
     }

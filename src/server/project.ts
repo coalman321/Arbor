@@ -19,6 +19,7 @@ import type {
   TreeFile,
 } from "../shared/model.ts";
 import { serializeSpecFile, serializeTreeFile } from "../shared/xml_write.ts";
+import { GitRepo } from "./git.ts";
 import { parseSpecFile, parseTreeFile } from "./xml_read.ts";
 
 export const MANIFEST_FILE = "bt_project.json";
@@ -41,27 +42,52 @@ function toPosix(p: string): string {
   return p.split(sep).join("/");
 }
 
+/**
+ * Where a project's files are read from: the directory on disk, or a git revision (see git.ts).
+ * Paths are project-relative with "/" separators.
+ */
+export interface ProjectSource {
+  /** File contents, or undefined if there is no such file. */
+  read(rel: string): Promise<string | undefined>;
+  /** Every .xml file under directory `rel`, recursively, sorted. */
+  listXml(rel: string): Promise<string[]>;
+}
+
 export class Project {
   readonly root: string;
   /** Content hash of every file as last read or written by us, keyed by project-relative path. */
   private versions = new Map<string, string>();
+  private gitRepo?: Promise<GitRepo | null>;
+  readonly disk: ProjectSource = {
+    read: async (rel) => {
+      const abs = this.resolvePath(rel);
+      return existsSync(abs) ? readFile(abs, "utf8") : undefined;
+    },
+    listXml: async (rel) => (await this.listTreeFiles(this.resolvePath(rel))).map((abs) => toPosix(relative(this.root, abs))),
+  };
 
   constructor(root: string) {
     this.root = resolve(root);
   }
 
-  async manifest(): Promise<ProjectManifest> {
+  /** The git repository holding this project, or null if it isn't in one (or git isn't installed). */
+  git(): Promise<GitRepo | null> {
+    this.gitRepo ??= GitRepo.open(this);
+    return this.gitRepo;
+  }
+
+  async manifest(source: ProjectSource = this.disk): Promise<ProjectManifest> {
     const defaults: ProjectManifest = {
       name: basename(this.root),
       nodes: "nodes.xml",
       trees: "trees",
       live: { url: DEFAULT_LIVE_URL },
     };
-    const path = join(this.root, MANIFEST_FILE);
-    if (!existsSync(path)) return defaults;
+    const text = await source.read(MANIFEST_FILE);
+    if (text === undefined) return defaults;
     let raw: Partial<ProjectManifest>;
     try {
-      raw = JSON.parse(await readFile(path, "utf8"));
+      raw = JSON.parse(text);
     } catch (e) {
       throw new ProjectError(`${MANIFEST_FILE}: ${(e as Error).message}`);
     }
@@ -103,17 +129,21 @@ export class Project {
     return out.sort();
   }
 
-  async load(): Promise<ProjectSnapshot> {
-    const manifest = await this.manifest();
+  /**
+   * Reads the whole project. From any source other than the disk (an old git revision), the result
+   * is for viewing only: the versions used to detect external edits are left alone.
+   */
+  async load(source: ProjectSource = this.disk): Promise<ProjectSnapshot> {
+    const track = source === this.disk;
+    const manifest = await this.manifest(source);
     const diagnostics: Diagnostic[] = [];
 
     let specModels: NodeModel[] = [];
     let specVersion = "";
-    const specPath = this.resolvePath(manifest.nodes);
-    if (existsSync(specPath)) {
-      const xml = await readFile(specPath, "utf8");
+    const xml = await source.read(manifest.nodes);
+    if (xml !== undefined) {
       specVersion = sha(xml);
-      this.versions.set(manifest.nodes, specVersion);
+      if (track) this.versions.set(manifest.nodes, specVersion);
       try {
         specModels = parseSpecFile(xml);
       } catch (e) {
@@ -131,11 +161,11 @@ export class Project {
     const trees: TreeDef[] = [];
     const treeOwner = new Map<string, string>();
     const extraModels = new Map<string, NodeModel>();
-    for (const abs of await this.listTreeFiles(this.resolvePath(manifest.trees))) {
-      const rel = toPosix(relative(this.root, abs));
-      const xml = await readFile(abs, "utf8");
+    for (const rel of await source.listXml(manifest.trees)) {
+      const xml = await source.read(rel);
+      if (xml === undefined) continue;
       const version = sha(xml);
-      this.versions.set(rel, version);
+      if (track) this.versions.set(rel, version);
       const file: TreeFile = { path: rel, includes: [], treeIds: [], version };
       files.push(file);
       let parsed;

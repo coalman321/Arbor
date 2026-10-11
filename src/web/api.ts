@@ -1,4 +1,4 @@
-import type { BrowseResult, NodeModel, ProjectSnapshot, SaveFileRequest, WorkspaceInfo } from "../shared/model.ts";
+import type { BrowseResult, GitInfo, NodeModel, ProjectSnapshot, RevSnapshot, SaveFileRequest, WorkspaceInfo } from "../shared/model.ts";
 
 export class ApiError extends Error {
   constructor(
@@ -40,6 +40,8 @@ export const api = {
   openProject: (path: string) => call<ProjectSnapshot>("POST", "/api/project/open", { path }),
   createProject: (path: string) => call<ProjectSnapshot>("POST", "/api/project/create", { path }),
   forgetRecent: (path: string) => call<WorkspaceInfo>("POST", "/api/recent/forget", { path }),
+  gitInfo: () => call<GitInfo>("GET", "/api/git/revs"),
+  gitSnapshot: (rev: string) => call<RevSnapshot>("GET", `/api/git/snapshot?rev=${encodeURIComponent(rev)}`),
 };
 
 export function wsUrl(path: string): string {

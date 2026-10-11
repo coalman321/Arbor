@@ -215,3 +215,40 @@ export interface BrowseResult {
   isProject: boolean;
   entries: { name: string; kind: "dir" | "xml"; isProject?: boolean }[];
 }
+
+/** The pseudo-revision for the project files as they are on disk now (saved edits only). */
+export const WORKTREE = "WORKTREE";
+
+export interface GitCommit {
+  sha: string;
+  short: string;
+  author: string;
+  /** ISO 8601 author date. */
+  date: string;
+  subject: string;
+}
+
+/** GET /api/git/revs: what can be compared. */
+export type GitInfo =
+  | { available: false; reason: string }
+  | {
+      available: true;
+      /** Current branch, or null on a detached HEAD. */
+      branch: string | null;
+      branches: string[];
+      tags: string[];
+      /** Recent commits on HEAD that touched the project's trees or node spec, newest first. */
+      commits: GitCommit[];
+      /** The trees or spec on disk differ from HEAD. */
+      dirty: boolean;
+    };
+
+/** GET /api/git/snapshot: the project as it was at one revision. */
+export interface RevSnapshot {
+  rev: string;
+  /** The commit `rev` resolved to; null for WORKTREE. */
+  sha: string | null;
+  /** Short description for the UI ("main · 1a2b3c4", "Working tree"). */
+  label: string;
+  snapshot: ProjectSnapshot;
+}
