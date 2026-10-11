@@ -4,6 +4,8 @@
   "private": true,
   "license": "MIT",
   "description": "Project-based editor and live viewer for BehaviorTree.CPP v4 trees",
+  "author": "coalman321",
+  "main": "build/desktop/main.cjs",
   "type": "module",
   "bin": {
     "arbor": "./bin/arbor.js"
@@ -15,7 +17,10 @@
     "mock-robot": "tsx src/mock/main.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "build:binary": "vite build && node scripts/build_binary.mjs"
+    "build:binary": "vite build && node scripts/build_binary.mjs",
+    "bundle": "vite build && node scripts/bundle.mjs",
+    "desktop": "npm run bundle && electron .",
+    "build:desktop": "npm run bundle && electron-builder --publish never"
   },
   "dependencies": {
     "fast-xml-parser": "^5.2.5",
@@ -29,6 +34,8 @@
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^4.6.0",
     "@xyflow/react": "^12.8.1",
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3",
     "esbuild": "^0.28.2",
     "postject": "^1.0.0-alpha.6",
     "react": "^19.1.0",
@@ -37,5 +44,39 @@
     "vite": "^7.0.4",
     "vitest": "^5.0.3",
     "zustand": "^5.0.6"
+  },
+  "build": {
+    "appId": "io.github.coalman321.arbor",
+    "productName": "Arbor",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "build/desktop/**",
+      "dist/**",
+      "package.json",
+      "!**/node_modules/**"
+    ],
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.developer-tools"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "zip"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "tar.gz"
+      ],
+      "category": "Development"
+    },
+    "artifactName": "Arbor-${version}-${os}-${arch}.${ext}"
   }
 }

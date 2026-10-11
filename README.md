@@ -4,7 +4,9 @@ A local editor and live viewer for [BehaviorTree.CPP](https://www.behaviortree.d
 
 ## Quick start
 
-Standalone binaries for Linux, macOS and Windows (x64 and arm64) are attached to each [GitHub release](https://github.com/coalman321/Arbor/releases). They need nothing else installed: unpack one and run `arbor --project DIR`. To build one for your own machine, run `npm run build:binary`, which writes it to `release/`.
+The desktop app for Linux, macOS and Windows (x64 and arm64) is attached to each [GitHub release](https://github.com/coalman321/Arbor/releases): a `.dmg` for macOS, an installer `.exe` for Windows, and an `.AppImage` for Linux. It starts on a screen for opening or creating a project, and quitting it stops everything. The app isn't code-signed yet, so macOS may report it as damaged; run `xattr -cr /Applications/Arbor.app` once to allow it. To build it for your own machine, run `npm run build:desktop`, which writes it to `release/`, or run it from a checkout with `npm run desktop`.
+
+To embed the editor in another Node application, `npm run bundle` writes a self-contained library to `build/lib/arbor.mjs` (see [src/server/index.ts](src/server/index.ts) for how to start it).
 
 To run from source, you need Node 22 or newer.
 

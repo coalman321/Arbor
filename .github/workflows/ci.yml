@@ -1,6 +1,6 @@
 name: CI
 
-# Typechecks, tests and builds the standalone `arbor` executable on every platform the release ships.
+# Typechecks, tests, bundles the server and packages the desktop app on every platform the release ships.
 on:
   push:
     branches: [main]
@@ -39,10 +39,13 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
-      - run: npm run build:binary
+      - run: npm run bundle
+
+      # Packages the app unpacked (no installer) to catch packaging problems before a release.
+      - run: npx electron-builder --dir --publish never
 
       - name: Smoke test
         shell: bash
         run: |
-          ./release/arbor init smoke-project
+          node bin/arbor.js init smoke-project
           test -f smoke-project/bt_project.json

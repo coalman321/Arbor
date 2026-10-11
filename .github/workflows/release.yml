@@ -1,7 +1,7 @@
 name: Release
 
-# Builds a standalone `arbor` executable per platform (scripts/build_binary.mjs). Pushing a semver
-# tag like v0.2.0 publishes them on a GitHub release.
+# Builds the Arbor desktop app (Electron, packaged by electron-builder) per platform. Pushing a
+# semver tag like v0.2.0 publishes them on a GitHub release.
 on:
   push:
     tags: ["v[0-9]+.[0-9]+.[0-9]+"]
@@ -26,7 +26,6 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # The binary embeds this exact Node runtime.
       - uses: actions/setup-node@v5
         with:
           node-version: 24
@@ -35,33 +34,23 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
-      - run: npm run build:binary
 
-      - name: Smoke test
+      # The app's version (and its file names) come from the tag.
+      - name: Set version
         shell: bash
-        run: |
-          ./release/arbor init smoke-project
-          test -f smoke-project/bt_project.json
+        run: npm version --no-git-tag-version --allow-same-version "${GITHUB_REF_NAME#v}"
 
-      - name: Package
-        shell: bash
-        run: |
-          name="arbor-${GITHUB_REF_NAME//\//-}-${{ matrix.target }}"
-          mkdir -p "pkg/$name"
-          cp release/arbor* LICENSE README.md "pkg/$name/"
-          cd pkg
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            7z a "$name.zip" "$name" > /dev/null
-          else
-            tar -czf "$name.tar.gz" "$name"
-          fi
+      - run: npm run build:desktop
 
       - uses: actions/upload-artifact@v4
         with:
           name: arbor-${{ matrix.target }}
           path: |
-            pkg/*.tar.gz
-            pkg/*.zip
+            release/*.dmg
+            release/*.zip
+            release/*.exe
+            release/*.AppImage
+            release/*.tar.gz
           if-no-files-found: error
 
   release:

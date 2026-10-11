@@ -16,6 +16,11 @@ export function isProjectDir(dir: string): boolean {
   return existsSync(join(dir, MANIFEST_FILE)) || (existsSync(join(dir, "nodes.xml")) && existsSync(join(dir, "trees")));
 }
 
+/** Default place for recent.json, shared by the `arbor` command and the desktop app. */
+export function configDir(): string {
+  return join(process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config"), "bt-editor");
+}
+
 export class Workspace {
   project: Project | null = null;
   private listeners: ((p: Project | null) => void)[] = [];
