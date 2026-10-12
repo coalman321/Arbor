@@ -1,7 +1,7 @@
 // Immutable edits on BTNode trees. Every function returns a new root and shares untouched subtrees,
 // so the store can keep old roots around as undo history.
 
-import type { BTNode } from "../shared/model.ts";
+import type { BTNode } from "@coalman321/arborist";
 
 let counter = 0;
 export function newUid(): string {

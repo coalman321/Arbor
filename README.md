@@ -208,20 +208,30 @@ Hover the time display to see the robot's wall-clock time at the current positio
 - **No blackboard:** `.btlog` files record only node statuses, so the **Blackboard** tab is empty during replay.
 - **Rejected files:** files that aren't a `FileLogger2` log are rejected with an error. A log that ends partway through a record, for example because the robot crashed, still plays up to that point.
 
+## Embedding the viewer: Arborist
+
+Loading, laying out and drawing trees, live status overlays and diffs live in a separate library,
+[Arborist](packages/arborist) (`@coalman321/arborist`), so other tools can show trees the way Arbor
+does. Arbor itself is built on it. See [its README](packages/arborist/README.md).
+
 ## How it's built
 
 ```
+packages/arborist/  the Arborist library: model, XML parsing, layout, diffs, statuses, React views
 src/
-├── shared/   model types, BT.CPP builtin catalog, validation, XML writer, live protocol and mapping
-├── server/   backend: CLI, project loading/saving (xml_read.ts, project.ts), file watching, robot relay
+├── shared/   project/API types, validation, XML writer, .btlog reader
+├── server/   backend: CLI, project loading/saving (project.ts), file watching, robot relay
 ├── desktop/  Electron app: runs the backend and shows the UI in a window
-├── web/      React + React Flow frontend; store.ts holds all state, actions.ts the edit commands
+├── web/      React + React Flow editor; store.ts holds all state, actions.ts the edit commands
 └── mock/     mock robot that speaks btlive
 cpp/          btlive server for BehaviorTree.CPP applications, and a demo robot
 ```
 
-The backend owns the files: it parses XML into the JSON model in `shared/model.ts` and writes it back
-with `shared/xml_write.ts`. The frontend only ever edits JSON. The API, all on the one port:
+The npm workspace links `packages/arborist` into the app, which uses its TypeScript sources directly
+(the package's `source` export condition), so changes to the library need no build step.
+
+The backend owns the files: it parses XML into the JSON model (Arborist's `loadTrees()`) and writes it
+back with `shared/xml_write.ts`. The frontend only ever edits JSON. The API, all on the one port:
 
 | | |
 |---|---|

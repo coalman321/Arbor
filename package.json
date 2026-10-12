@@ -7,16 +7,19 @@
   "author": "coalman321",
   "main": "build/desktop/main.cjs",
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "bin": {
     "arbor": "./bin/arbor.js"
   },
   "scripts": {
-    "dev": "tsx watch --clear-screen=false src/server/main.ts --dev --project examples/demo_project",
+    "dev": "tsx watch --conditions=source --clear-screen=false src/server/main.ts --dev --project examples/demo_project",
     "build": "vite build",
-    "start": "tsx src/server/main.ts",
-    "mock-robot": "tsx src/mock/main.ts",
-    "test": "vitest run",
-    "typecheck": "tsc --noEmit",
+    "start": "tsx --conditions=source src/server/main.ts",
+    "mock-robot": "tsx --conditions=source src/mock/main.ts",
+    "test": "vitest run && npm test -w @coalman321/arborist",
+    "typecheck": "tsc --noEmit && npm run typecheck -w @coalman321/arborist",
     "build:binary": "vite build && node scripts/build_binary.mjs",
     "bundle": "vite build && node scripts/bundle.mjs",
     "stage-git": "node scripts/stage_git.mjs",
@@ -24,7 +27,7 @@
     "build:desktop": "npm run bundle && npm run stage-git && electron-builder --publish never"
   },
   "dependencies": {
-    "fast-xml-parser": "^5.2.5",
+    "@coalman321/arborist": "*",
     "tsx": "^4.20.3",
     "ws": "^8.18.3"
   },

@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { parseTreeFile } from "../src/server/xml_read.ts";
-import type { BTNode } from "../src/shared/model.ts";
-import { diffTreeDefs } from "../src/shared/tree_diff.ts";
-import { diffLines, mergeAll, type MergedTree } from "../src/web/diff_view.ts";
+import { diffLines, mergeAll, type MergedTree } from "../src/diff_view.ts";
+import type { BTNode } from "../src/model.ts";
+import { diffTreeDefs } from "../src/tree_diff.ts";
+import { parseTreeFile } from "../src/xml_read.ts";
 
 const trees = (body: string) => parseTreeFile(`<root BTCPP_format="4">${body}</root>`, "t.xml").trees;
 

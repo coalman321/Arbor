@@ -1,13 +1,25 @@
 // Compare mode: the project's trees at two git revisions (or a revision and the files on disk),
-// each drawn as one merged tree (see diff_view.ts). It keeps its own state and leaves the editor's
-// alone, so closing it returns to editing exactly where you were.
+// each drawn as one merged tree (see Arborist's diff_view.ts). It keeps its own state and leaves
+// the editor's alone, so closing it returns to editing exactly where you were.
 
 import { useMemo } from "react";
-import { findNode, WORKTREE, type BTNode, type GitInfo, type NodeModel, type RevSnapshot } from "../shared/model.ts";
-import { diffTreeDefs, type TreeDefDiff, type TreeDefStatus } from "../shared/tree_diff.ts";
-import { projectModels } from "../shared/validate.ts";
+import {
+  changeStops,
+  diffTreeDefs,
+  findNode,
+  firstChangedTree,
+  mergeAll,
+  mergeModels,
+  treeKey,
+  type BTNode,
+  type ChangeStop,
+  type Mark,
+  type MergedTree,
+  type NodeModel,
+  type TreeDefDiff,
+} from "@coalman321/arborist";
+import { WORKTREE, type GitInfo, type RevSnapshot } from "../shared/model.ts";
 import { api } from "./api.ts";
-import { mergeAll, treeKey, type Mark, type MergedTree } from "./diff_view.ts";
 import { toast, useStore } from "./store.ts";
 
 export type GitRevs = Extract<GitInfo, { available: true }>;
@@ -83,10 +95,8 @@ export async function compare(base: string) {
     if (id !== request || !cur) return;
     const trees = diffTreeDefs(o.snapshot.trees, n.snapshot.trees);
     const merged = mergeAll(trees);
-    const sorted = sortTreeDiffs(trees);
-    const firstChanged = sorted.find((t) => t.status !== "unchanged") ?? sorted[0];
     const keep = cur.active && merged[cur.active] && trees.find((t) => treeKey(t) === cur.active)?.status !== "unchanged";
-    const active = keep ? cur.active : firstChanged ? treeKey(firstChanged) : null;
+    const active = keep ? cur.active : firstChangedTree(trees);
     // Merged uids come from the parse, so a selection can't be carried over to new content.
     set({ diff: { ...cur, old: o, new: n, trees, merged, active, selection: null, status: "ready" } });
   } catch (e) {
@@ -123,33 +133,14 @@ export function showDiffTree(key: string, selection: string | null = null) {
   if (d?.merged[key]) set({ diff: { ...d, active: key, selection } });
 }
 
-const STATUS_ORDER: Record<TreeDefStatus, number> = { changed: 0, renamed: 1, added: 2, removed: 3, unchanged: 4 };
-
-/** Changed trees first, then renamed, added, removed, unchanged; by ID within each. */
-export function sortTreeDiffs(trees: TreeDefDiff[]): TreeDefDiff[] {
-  return [...trees].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status] || treeKey(a).localeCompare(treeKey(b)));
-}
-
-interface Stop {
-  key: string;
-  uid: string;
-}
-
-/** Changes to step through: those in changed trees (an unchanged tree's SubTree flags are only a pointer). */
-function stopsOf(trees: TreeDefDiff[], merged: Record<string, MergedTree>): Stop[] {
-  return sortTreeDiffs(trees)
-    .filter((t) => t.status !== "unchanged")
-    .flatMap((t) => merged[treeKey(t)].changes.map((uid) => ({ key: treeKey(t), uid })));
-}
-
 /** Every change across all trees, and which one is selected (-1 if none). */
-export function useStops(): { stops: Stop[]; index: number } {
+export function useStops(): { stops: ChangeStop[]; index: number } {
   const d = useStore((s) => s.diff);
   // Recomputed when the comparison changes, not on every selection.
   const ready = d?.status === "ready";
   const trees = d?.trees;
   const merged = d?.merged;
-  const stops = useMemo(() => (ready && trees && merged ? stopsOf(trees, merged) : []), [ready, trees, merged]);
+  const stops = useMemo(() => (ready && trees && merged ? changeStops(trees, merged) : []), [ready, trees, merged]);
   const index = stops.findIndex((s) => s.key === d?.active && s.uid === d?.selection);
   return { stops, index };
 }
@@ -158,7 +149,7 @@ export function useStops(): { stops: Stop[]; index: number } {
 export function stepChange(delta: 1 | -1) {
   const d = get().diff;
   if (!d || d.status !== "ready") return;
-  const stops = stopsOf(d.trees, d.merged);
+  const stops = changeStops(d.trees, d.merged);
   if (!stops.length) return;
   const cur = stops.findIndex((s) => s.key === d.active && s.uid === d.selection);
   let i: number;
@@ -174,9 +165,7 @@ export function stepChange(delta: 1 | -1) {
 
 /** Node types from both versions, the new one winning, so removed nodes still draw correctly. */
 export function mergedModels(oldRev: RevSnapshot | undefined, newRev: RevSnapshot | undefined): Map<string, NodeModel> {
-  const models = projectModels(newRev?.snapshot.specModels ?? [], newRev?.snapshot.trees ?? []);
-  for (const [id, m] of projectModels(oldRev?.snapshot.specModels ?? [], oldRev?.snapshot.trees ?? [])) if (!models.has(id)) models.set(id, m);
-  return models;
+  return mergeModels(oldRev?.snapshot, newRev?.snapshot);
 }
 
 export function useDiffMark(treeId: string, uid: string): Mark | undefined {

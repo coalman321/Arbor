@@ -1,4 +1,14 @@
-import type { AboutInfo, BrowseResult, LibraryLicense, GitInfo, NodeModel, ProjectSnapshot, RevSnapshot, SaveFileRequest, WorkspaceInfo } from "../shared/model.ts";
+import type { NodeModel } from "@coalman321/arborist";
+import type {
+  AboutInfo,
+  BrowseResult,
+  LibraryLicense,
+  GitInfo,
+  ProjectSnapshot,
+  RevSnapshot,
+  SaveFileRequest,
+  WorkspaceInfo,
+} from "../shared/model.ts";
 
 export class ApiError extends Error {
   constructor(

@@ -2,7 +2,7 @@
 // robot only has to be reachable from the machine running the editor, not from the browser.
 
 import WebSocket from "ws";
-import type { RelayMsg } from "../shared/protocol.ts";
+import type { RelayMsg } from "../shared/relay.ts";
 
 const RECONNECT_MS = 2000;
 

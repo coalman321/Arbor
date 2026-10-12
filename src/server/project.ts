@@ -9,18 +9,10 @@ import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import type {
-  Diagnostic,
-  NodeModel,
-  ProjectManifest,
-  ProjectSnapshot,
-  SaveFileRequest,
-  TreeDef,
-  TreeFile,
-} from "../shared/model.ts";
+import { loadTrees, parseTreeFile, type Diagnostic, type NodeModel, type XmlFile } from "@coalman321/arborist";
+import type { ProjectManifest, ProjectSnapshot, SaveFileRequest, TreeFile } from "../shared/model.ts";
 import { serializeSpecFile, serializeTreeFile } from "../shared/xml_write.ts";
 import { GitRepo } from "./git.ts";
-import { parseSpecFile, parseTreeFile } from "./xml_read.ts";
 
 export const MANIFEST_FILE = "bt_project.json";
 export const DEFAULT_LIVE_URL = "ws://localhost:1670";
@@ -138,17 +130,13 @@ export class Project {
     const manifest = await this.manifest(source);
     const diagnostics: Diagnostic[] = [];
 
-    let specModels: NodeModel[] = [];
+    let spec: XmlFile | undefined;
     let specVersion = "";
-    const xml = await source.read(manifest.nodes);
-    if (xml !== undefined) {
-      specVersion = sha(xml);
+    const specXml = await source.read(manifest.nodes);
+    if (specXml !== undefined) {
+      specVersion = sha(specXml);
       if (track) this.versions.set(manifest.nodes, specVersion);
-      try {
-        specModels = parseSpecFile(xml);
-      } catch (e) {
-        diagnostics.push({ severity: "error", message: (e as Error).message, file: manifest.nodes });
-      }
+      spec = { path: manifest.nodes, xml: specXml };
     } else {
       diagnostics.push({
         severity: "warning",
@@ -157,68 +145,27 @@ export class Project {
       });
     }
 
-    const files: TreeFile[] = [];
-    const trees: TreeDef[] = [];
-    const treeOwner = new Map<string, string>();
-    const extraModels = new Map<string, NodeModel>();
+    const xmlFiles: XmlFile[] = [];
+    const versions: string[] = [];
     for (const rel of await source.listXml(manifest.trees)) {
       const xml = await source.read(rel);
       if (xml === undefined) continue;
       const version = sha(xml);
       if (track) this.versions.set(rel, version);
-      const file: TreeFile = { path: rel, includes: [], treeIds: [], version };
-      files.push(file);
-      let parsed;
-      try {
-        parsed = parseTreeFile(xml, rel);
-      } catch (e) {
-        file.readOnlyReason = (e as Error).message;
-        diagnostics.push({ severity: "error", message: (e as Error).message, file: rel });
-        continue;
-      }
-      for (const w of parsed.warnings) diagnostics.push({ severity: "warning", message: w, file: rel });
-      file.mainTree = parsed.mainTree;
-      file.includes = parsed.includes;
-      for (const t of parsed.trees) {
-        const owner = treeOwner.get(t.id);
-        if (owner) {
-          file.readOnlyReason = `Tree ID "${t.id}" is already defined in ${owner}`;
-          diagnostics.push({ severity: "error", message: file.readOnlyReason, file: rel, treeId: t.id });
-          continue;
-        }
-        treeOwner.set(t.id, rel);
-        file.treeIds.push(t.id);
-        trees.push(t);
-      }
-      // Groot2 copies node models into each tree file; use them as a fallback for the spec.
-      for (const m of parsed.nodeModels) if (!extraModels.has(m.id)) extraModels.set(m.id, m);
-      // A file may also describe the ports of a tree defined in another file.
-      for (const m of parsed.foreignSubtreeModels) {
-        const t = trees.find((x) => x.id === m.id);
-        if (t && t.ports.length === 0) t.ports = m.ports;
-      }
+      xmlFiles.push({ path: rel, xml });
+      versions.push(version);
     }
-
-    const specIds = new Set(specModels.map((m) => m.id));
-    const fallback = [...extraModels.values()].filter((m) => !specIds.has(m.id));
-    if (fallback.length) {
-      diagnostics.push({
-        severity: "info",
-        message: `${fallback.length} node type(s) are only declared in tree files (${fallback
-          .slice(0, 5)
-          .map((m) => m.id)
-          .join(", ")}${fallback.length > 5 ? ", ..." : ""}); add them to ${manifest.nodes}`,
-      });
-    }
+    const loaded = loadTrees({ spec, specPath: manifest.nodes, files: xmlFiles });
+    const files: TreeFile[] = loaded.files.map((f, i) => ({ ...f, version: versions[i] }));
 
     return {
       root: this.root,
       manifest,
-      specModels: [...specModels, ...fallback],
+      specModels: loaded.specModels,
       specVersion,
       files,
-      trees,
-      diagnostics,
+      trees: loaded.trees,
+      diagnostics: [...diagnostics, ...loaded.diagnostics],
     };
   }
 

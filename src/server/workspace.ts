@@ -7,7 +7,7 @@ import { homedir } from "node:os";
 import { basename, dirname, extname, isAbsolute, join, resolve, sep } from "node:path";
 import type { BrowseResult, RecentProject, WorkspaceInfo } from "../shared/model.ts";
 import { initProject, MANIFEST_FILE, Project, ProjectError } from "./project.ts";
-import { parseTreeFile, XmlError } from "./xml_read.ts";
+import { parseTreeFile, XmlError } from "@coalman321/arborist";
 
 const RECENT_LIMIT = 10;
 

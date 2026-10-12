@@ -1,5 +1,5 @@
 // "btlive" v1: JSON-over-WebSocket protocol between a robot running BehaviorTree.CPP and the editor.
-// docs/live_protocol.md is the normative description; keep the two in sync.
+// Arbor's docs/live_protocol.md is the normative description; keep the two in sync.
 
 export const LIVE_PROTOCOL = "btlive";
 export const LIVE_PROTOCOL_VERSION = 1;
@@ -90,14 +90,5 @@ export type ClientMessage =
   | { op: "get_tree" }
   | { op: "get_snapshot" }
   | { op: "get_blackboard"; request_id?: number };
-
-// editor backend -> editor frontend, on the relay socket only
-
-export interface RelayMsg {
-  op: "relay";
-  state: "connecting" | "connected" | "disconnected" | "error";
-  url: string;
-  message?: string;
-}
 
 export const STATUS_VALUES: readonly NodeStatus[] = ["IDLE", "RUNNING", "SUCCESS", "FAILURE", "SKIPPED"];

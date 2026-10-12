@@ -2,9 +2,16 @@
 // BT.CPP does), ticks it, and records status transitions. Leaves succeed or fail at random, so it
 // only exercises the live view; it is not a reference for BT.CPP semantics.
 
-import type { BTNode, NodeCategory, NodeModel, TreeDef } from "../shared/model.ts";
-import type { NodeStatus, RuntimeNode, StatusChange } from "../shared/protocol.ts";
-import { modelFor } from "../shared/validate.ts";
+import {
+  modelFor,
+  type BTNode,
+  type NodeCategory,
+  type NodeModel,
+  type NodeStatus,
+  type RuntimeNode,
+  type StatusChange,
+  type TreeDef,
+} from "@coalman321/arborist";
 
 interface SimNode {
   uid: number;

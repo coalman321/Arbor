@@ -10,7 +10,7 @@ client and only listens, apart from a few requests.
 - **Reference server:** [`cpp/`](../cpp/) for BehaviorTree.CPP 4.x applications, ready to use.
   The mock robot in [`src/mock/`](../src/mock/) is a simulated one in TypeScript.
 - **Reference client:** [`src/web/live.ts`](../src/web/live.ts).
-- **Types:** [`src/shared/protocol.ts`](../src/shared/protocol.ts) mirrors this document. Keep the
+- **Types:** [`packages/arborist/src/protocol.ts`](../packages/arborist/src/protocol.ts) mirrors this document. Keep the
   two in sync.
 
 ## Connection

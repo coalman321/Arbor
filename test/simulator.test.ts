@@ -2,9 +2,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { Simulator } from "../src/mock/simulator.ts";
 import { Project } from "../src/server/project.ts";
-import { mapRuntimeTree } from "../src/shared/live_mapping.ts";
-import { STATUS_VALUES } from "../src/shared/protocol.ts";
-import { projectModels } from "../src/shared/validate.ts";
+import { mapRuntimeTree, projectModels, STATUS_VALUES } from "@coalman321/arborist";
 
 const DEMO = join(import.meta.dirname, "..", "examples", "demo_project");
 

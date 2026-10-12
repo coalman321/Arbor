@@ -5,9 +5,9 @@
 // Old and new nodes share uid numbering (both are "n1", "n2", ... per parse), so merged uids carry
 // a prefix: N<uid> for nodes of the new version, O<uid> for removed nodes, M<uid> for markers.
 
-import { walk, type BTNode, type TreeDef } from "../shared/model.ts";
-import type { NodeChange, TreeDefDiff } from "../shared/tree_diff.ts";
 import { visibleAttrs, type Line } from "./layout.ts";
+import { walk, type BTNode, type TreeDef } from "./model.ts";
+import type { NodeChange, TreeDefDiff } from "./tree_diff.ts";
 
 export type MarkKind = "added" | "removed" | "moved" | "moved-away" | "changed" | "same";
 

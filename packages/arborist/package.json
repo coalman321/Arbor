@@ -1,0 +1,77 @@
+{
+  "name": "@coalman321/arborist",
+  "version": "0.1.0",
+  "license": "MIT",
+  "description": "Load and visualize BehaviorTree.CPP v4 trees, with live status overlays; the viewer behind the Arbor editor",
+  "author": "coalman321",
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./react": {
+      "source": "./src/react/index.ts",
+      "types": "./dist/types/react/index.d.ts",
+      "import": "./dist/react.js"
+    },
+    "./mount": {
+      "source": "./src/mount.tsx",
+      "types": "./dist/types/mount.d.ts",
+      "import": "./dist/mount.js"
+    },
+    "./style.css": {
+      "source": "./src/viewer.css",
+      "default": "./dist/style.css"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "vite build && vite build --mode mount && tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^5.2.5",
+    "zustand": "^5.0.6"
+  },
+  "peerDependencies": {
+    "@xyflow/react": "^12.8.1",
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@xyflow/react": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.6.0",
+    "@xyflow/react": "^12.8.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.4",
+    "vitest": "^5.0.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/coalman321/Arbor.git",
+    "directory": "packages/arborist"
+  }
+}

@@ -1,21 +1,25 @@
 // Compare mode's screen: revision pickers and the changed trees on the left, the merged tree in the
 // middle, and what changed about the selected node on the right. Nothing here can be edited.
 
+import { Background, Controls, ReactFlow, useReactFlow } from "@xyflow/react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
-  Background,
-  BaseEdge,
-  Controls,
-  EdgeLabelRenderer,
-  getSmoothStepPath,
-  ReactFlow,
-  useReactFlow,
-  type Edge,
-  type EdgeProps,
-} from "@xyflow/react";
-import { memo, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { findParent, nodeLabel, type BTNode, type NodeModel } from "../../shared/model.ts";
-import type { TreeDefDiff, TreeDefStatus } from "../../shared/tree_diff.ts";
-import { modelFor } from "../../shared/validate.ts";
+  categoryOf,
+  findParent,
+  iconFor,
+  layoutTree,
+  modelFor,
+  nodeLabel,
+  sortTreeDiffs,
+  treeKey,
+  type BTNode,
+  type Mark,
+  type MarkKind,
+  type MergedTree,
+  type NodeModel,
+  type TreeDefDiff,
+  type TreeDefStatus,
+} from "@coalman321/arborist";
 import {
   closeCompare,
   compare,
@@ -24,18 +28,27 @@ import {
   showMoreHistory,
   resolveDiffPath,
   showDiffTree,
-  sortTreeDiffs,
   stepChange,
   useStops,
   type DiffState,
   type GitRevs,
 } from "../diff.ts";
-import { diffLines, treeKey, type Mark, type MarkKind, type MergedTree } from "../diff_view.ts";
 import { layoutGraph, type GraphRow } from "../git_graph.ts";
-import { categoryOf, layoutTree } from "../layout.ts";
 import { select, useStore } from "../store.ts";
-import { BTNodeView, FrameView, WindowView, type BTFlowNode } from "./BTNodeView.tsx";
-import { iconFor } from "./icons.ts";
+import {
+  boxesByPath,
+  diffEdgeClass,
+  diffLinesFor,
+  edgeTypes,
+  flowEdges,
+  flowNodes,
+  nodeRect,
+  nodeTypes,
+  ViewerContext,
+  type BTFlowEdge,
+  type BTFlowNode,
+} from "@coalman321/arborist/react";
+import { diffViewer } from "../viewer.ts";
 import { PanelResizer, type PanelSizes } from "./PanelResizer.tsx";
 
 export function DiffView({ sizes, setSize }: { sizes: PanelSizes; setSize: (edge: keyof PanelSizes, size: number | null) => void }) {
@@ -340,41 +353,6 @@ function CompareBar() {
 // ---------------------------------------------------------------------------------------------
 // Canvas
 
-const nodeTypes = { bt: BTNodeView, frame: FrameView, window: WindowView };
-
-type DiffEdgeData = { label?: string; dir: "TB" | "LR"; bus?: number; kind?: MarkKind };
-
-function DiffEdgeImpl(props: EdgeProps<Edge<DiffEdgeData>>) {
-  const { data } = props;
-  const bus = data?.bus;
-  const [path] = getSmoothStepPath({
-    ...props,
-    borderRadius: 10,
-    ...(bus === undefined ? {} : data?.dir === "LR" ? { centerX: bus } : { centerY: bus }),
-  });
-  const lr = data?.dir === "LR";
-  return (
-    <>
-      <BaseEdge path={path} className={`bt-edge ${data?.kind && data.kind !== "same" ? `diff-${data.kind}` : ""}`} />
-      {data?.label && (
-        <EdgeLabelRenderer>
-          <div
-            className="bt-edge-label nodrag nopan"
-            style={{
-              transform: lr
-                ? `translate(-100%, -100%) translate(${props.targetX - 8}px, ${props.targetY - 3}px)`
-                : `translate(-50%, -100%) translate(${props.targetX}px, ${props.targetY - 5}px)`,
-            }}
-          >
-            {data.label}
-          </div>
-        </EdgeLabelRenderer>
-      )}
-    </>
-  );
-}
-const edgeTypes = { diff: memo(DiffEdgeImpl) };
-
 function DiffCanvas() {
   const d = useStore((s) => s.diff!);
   const expanded = useStore((s) => s.expanded);
@@ -394,61 +372,24 @@ function DiffCanvas() {
             isExpanded: (p) => !!expanded[`diff:${tree.key}|${p}`],
             dir,
             frameDecorator: decoratorFrames ? (n) => modelFor(n, models)?.category === "Decorator" : undefined,
-            linesFor: (n, treeId) => diffLines(n, merged[treeId]?.marks.get(n.uid)),
+            linesFor: diffLinesFor(merged),
           })
         : [],
     [tree, defs, expanded, dir, decoratorFrames, models, merged],
   );
   const byPath = useMemo(() => new Map(items.map((i) => [i.path, i])), [items]);
   // Nodes drawn inside another (folded conditions) are revealed by the box that shows them.
-  const boxFor = useMemo(() => {
-    const m = new Map(byPath);
-    for (const i of items) for (const p of i.foldedPaths) m.set(p, i);
-    return m;
-  }, [items, byPath]);
-
-  const nodes = useMemo<BTFlowNode[]>(
-    () =>
-      items.map((item) => ({
-        id: item.path,
-        type: item.window ? "window" : item.frame ? "frame" : "bt",
-        position: { x: item.x, y: item.y },
-        zIndex: item.frame ? item.frame.level : 1000,
-        // Only a frame's header takes the pointer (see the editor's Canvas).
-        ...(item.frame ? { style: { pointerEvents: "none" as const } } : {}),
-        data: {
-          item,
-          category: categoryOf(item.node, models),
-          icon: modelFor(item.node, models)?.metadata?.icon,
-          problems: [],
-          foldedProblems: {},
-          dir,
-          liveMain: false,
-        },
-        draggable: false,
-        selected: item.path === selection,
-      })),
-    [items, models, dir, selection],
-  );
-  const edges = useMemo<Edge<DiffEdgeData>[]>(
-    () =>
-      items
-        .filter((i) => i.parentPath && !byPath.get(i.parentPath)?.frame)
-        .map((i) => ({
-          id: `${i.parentPath}->${i.path}`,
-          source: i.parentPath!,
-          target: i.path,
-          type: "diff",
-          data: { label: i.edgeLabel, dir, bus: i.edgeBus, kind: i.window ? undefined : merged[i.treeId]?.marks.get(i.node.uid)?.kind },
-          selectable: false,
-        })),
-    [items, byPath, dir, merged],
+  const boxFor = useMemo(() => boxesByPath(items), [items]);
+  const nodes = useMemo(() => flowNodes(items, { models, dir, liveMain: false, selection }), [items, models, dir, selection]);
+  const edges = useMemo(
+    () => flowEdges(items, { dir, liveMain: false, edgeClass: diffEdgeClass(merged) }),
+    [items, dir, merged],
   );
 
   const center = (path: string) => {
     const it = boxFor.get(path);
     if (!it) return false;
-    const r = it.frame ? (dir === "TB" ? { ...it, h: it.frame.headerH } : { ...it, w: it.frame.headerW }) : it;
+    const r = nodeRect(it, dir);
     flow.setCenter(r.x + r.w / 2, r.y + r.h / 2, { zoom: Math.max(flow.getZoom(), 0.9), duration: 250 });
     return true;
   };
@@ -484,32 +425,34 @@ function DiffCanvas() {
   if (empty) return <div className="canvas-empty">{empty}</div>;
 
   return (
-    <div className={`canvas compare-canvas ${d.status === "loading" ? "is-loading" : ""}`}>
-      <ReactFlow<BTFlowNode, Edge<DiffEdgeData>>
-        className={dir === "LR" ? "lr" : ""}
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        nodesDraggable={false}
-        nodesConnectable={false}
-        elementsSelectable
-        minZoom={0.1}
-        maxZoom={2}
-        proOptions={{ hideAttribution: true }}
-        deleteKeyCode={null}
-        selectionKeyCode={null}
-        multiSelectionKeyCode={null}
-        onNodeClick={(_, n) => select(byPath.get(n.id)?.window ? byPath.get(n.id)!.parentPath : n.id)}
-        onNodeDoubleClick={(_, n) => {
-          const it = byPath.get(n.id);
-          if (it?.node.type === "SubTree" && it.node.attrs.ID && merged[it.node.attrs.ID]) showDiffTree(it.node.attrs.ID);
-        }}
-        onPaneClick={() => select(null)}
-      >
-        <Background gap={24} size={1} />
-        <Controls showInteractive={false} />
-      </ReactFlow>
+    <div className={`canvas arbor-viewer compare-canvas ${d.status === "loading" ? "is-loading" : ""}`}>
+      <ViewerContext.Provider value={diffViewer}>
+        <ReactFlow<BTFlowNode, BTFlowEdge>
+          className={dir === "LR" ? "lr" : ""}
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable
+          minZoom={0.1}
+          maxZoom={2}
+          proOptions={{ hideAttribution: true }}
+          deleteKeyCode={null}
+          selectionKeyCode={null}
+          multiSelectionKeyCode={null}
+          onNodeClick={(_, n) => select(byPath.get(n.id)?.window ? byPath.get(n.id)!.parentPath : n.id)}
+          onNodeDoubleClick={(_, n) => {
+            const it = byPath.get(n.id);
+            if (it?.node.type === "SubTree" && it.node.attrs.ID && merged[it.node.attrs.ID]) showDiffTree(it.node.attrs.ID);
+          }}
+          onPaneClick={() => select(null)}
+        >
+          <Background gap={24} size={1} />
+          <Controls showInteractive={false} />
+        </ReactFlow>
+      </ViewerContext.Provider>
     </div>
   );
 }

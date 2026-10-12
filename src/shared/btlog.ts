@@ -11,7 +11,7 @@
 //   transitions            9 bytes each: 6-byte time since start (us), uint16 node uid, uint8 status
 
 import { XMLParser } from "fast-xml-parser";
-import type { NodeStatus, RuntimeNode } from "./protocol.ts";
+import type { NodeStatus, RuntimeNode } from "@coalman321/arborist";
 
 const MAGIC = "BTCPP4-FileLogger2";
 const HEADER = MAGIC.length + 1 + 4;

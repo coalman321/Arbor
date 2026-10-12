@@ -1,0 +1,756 @@
+/* Arborist's tree view. Everything it draws sits inside an element with class "arbor-viewer"
+   (TreeViewer and createTreeViewer add it), which also carries the color tokens below: a host
+   restyles the view by overriding them on .arbor-viewer, e.g.
+
+     .arbor-viewer { --node-bg: #222; --accent: hotpink; }
+
+   Category colors are kept away from the live status colors (amber/green/red) so a node's type and
+   its runtime state never read as the same thing. */
+
+@import "@xyflow/react/dist/style.css";
+
+.arbor-viewer {
+  --canvas: #fafbfc;
+  --grid: #e3e6eb;
+  --node-bg: #ffffff;
+  --panel: #ffffff;
+  --panel-2: #f1f3f6;
+  --hover: #eef1f6;
+  --border: #dde1e7;
+  --text: #1c2330;
+  --muted: #6b7484;
+  --accent: #2563eb;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 2px 8px rgb(0 0 0 / 0.05);
+
+  --cat-control: #2563eb;
+  --cat-decorator: #7c3aed;
+  --cat-action: #0f766e;
+  --cat-condition: #c026d3;
+  --cat-subtree: #475569;
+  --cat-unknown: #b91c1c;
+
+  --st-running: #f59e0b;
+  --st-success: #16a34a;
+  --st-failure: #dc2626;
+  --st-skipped: #94a3b8;
+
+  --error: #dc2626;
+  --warning: #d97706;
+  --bb: #7c3aed;
+
+  --diff-add: #15803d;
+  --diff-del: #dc2626;
+  --diff-mod: #d97706;
+  --diff-move: #0284c7;
+
+  color-scheme: light;
+  background: var(--canvas);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+}
+
+/* Dark: with data-theme="dark", or following the system unless data-theme="light". */
+.arbor-viewer[data-theme="dark"] {
+  --canvas: #14181e;
+  --grid: #232833;
+  --node-bg: #1f242d;
+  --panel: #1a1e26;
+  --panel-2: #20252e;
+  --hover: #262c37;
+  --border: #2d333e;
+  --text: #e3e7ee;
+  --muted: #8b93a3;
+  --accent: #3b82f6;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 2px 10px rgb(0 0 0 / 0.3);
+  --cat-control: #60a5fa;
+  --cat-decorator: #a78bfa;
+  --cat-action: #2dd4bf;
+  --cat-condition: #e879f9;
+  --cat-subtree: #94a3b8;
+  --cat-unknown: #f87171;
+  --st-success: #22c55e;
+  --st-failure: #ef4444;
+  --bb: #c4b5fd;
+  --diff-add: #4ade80;
+  --diff-del: #f87171;
+  --diff-mod: #fbbf24;
+  --diff-move: #38bdf8;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  .arbor-viewer:not([data-theme="light"]) {
+    --canvas: #14181e;
+    --grid: #232833;
+    --node-bg: #1f242d;
+    --panel: #1a1e26;
+    --panel-2: #20252e;
+    --hover: #262c37;
+    --border: #2d333e;
+    --text: #e3e7ee;
+    --muted: #8b93a3;
+    --accent: #3b82f6;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 2px 10px rgb(0 0 0 / 0.3);
+    --cat-control: #60a5fa;
+    --cat-decorator: #a78bfa;
+    --cat-action: #2dd4bf;
+    --cat-condition: #e879f9;
+    --cat-subtree: #94a3b8;
+    --cat-unknown: #f87171;
+    --st-success: #22c55e;
+    --st-failure: #ef4444;
+    --bb: #c4b5fd;
+    --diff-add: #4ade80;
+    --diff-del: #f87171;
+    --diff-mod: #fbbf24;
+    --diff-move: #38bdf8;
+    color-scheme: dark;
+  }
+}
+
+.arbor-viewer .muted {
+  color: var(--muted);
+}
+.arbor-viewer .bt-node-port .v.bb {
+  color: var(--bb);
+}
+.arbor-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  pointer-events: none;
+}
+.bt-window-header button {
+  font: inherit;
+  font-size: 12px;
+  color: inherit;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.bt-window-header button:hover {
+  background: var(--hover);
+}
+
+
+.badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 3px 5px;
+  border-radius: 8px;
+  margin-left: 4px;
+  color: #fff;
+}
+.badge-error {
+  background: var(--error);
+}
+.badge-warning {
+  background: var(--warning);
+}
+
+.cat-control {
+  --c: var(--cat-control);
+}
+.cat-decorator {
+  --c: var(--cat-decorator);
+}
+.cat-action {
+  --c: var(--cat-action);
+}
+.cat-condition {
+  --c: var(--cat-condition);
+}
+.cat-subtree {
+  --c: var(--cat-subtree);
+}
+.cat-unknown {
+  --c: var(--cat-unknown);
+}
+.arbor-viewer .react-flow {
+  --xy-background-pattern-color: var(--grid);
+  --xy-edge-stroke: var(--muted);
+  --xy-controls-button-background-color: var(--panel);
+  --xy-controls-button-color: var(--text);
+  --xy-controls-button-border-color: var(--border);
+  --xy-controls-button-background-color-hover: var(--hover);
+}
+
+.bt-node {
+  position: relative;
+  background: var(--node-bg);
+  border: 1.5px solid var(--border);
+  border-left: 4px solid var(--c);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.bt-node.selected {
+  border-color: var(--accent);
+  border-left-color: var(--c);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.bt-node.readonly {
+  opacity: 0.78;
+  border-style: dashed;
+  border-left-style: solid;
+}
+.bt-node-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px 6px;
+  font-weight: 650;
+  font-size: 13px;
+}
+.bt-node-icon {
+  color: var(--c);
+  font-weight: 800;
+  width: 16px;
+  text-align: center;
+  flex: none;
+}
+.bt-node-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bt-node-flavor {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0 4px;
+}
+.bt-node-header .badge {
+  margin-left: auto;
+}
+.bt-node-name {
+  padding: 0 10px 4px 32px;
+  color: var(--muted);
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: -4px;
+}
+/* Condition drawn inside IfThenElse/WhileDoElse/Precondition */
+.bt-node-cond {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin: 0 8px 6px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--cat-condition) 9%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cat-condition) 25%, transparent);
+  font-size: 12px;
+  line-height: 19px;
+}
+.bt-node-cond.empty {
+  border-style: dashed;
+  background: none;
+}
+.cond-keyword {
+  font-weight: 700;
+  font-size: 11px;
+  color: var(--cat-condition);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  flex: none;
+}
+.cond-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 3px;
+  min-width: 0;
+}
+.cond-seq {
+  display: contents;
+}
+.cond-token {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0 3px;
+  border: 1px solid transparent;
+  overflow-wrap: anywhere;
+}
+.cond-token:hover {
+  background: var(--hover);
+}
+.cond-token.selected {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.cond-leaf {
+  font-weight: 600;
+}
+.cond-op {
+  color: var(--muted);
+  font-weight: 700;
+}
+.cond-args,
+.cond-script {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.cond-script {
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+.cond-token.has-problem {
+  text-decoration: underline wavy var(--error);
+}
+.cond-token.is-running {
+  background: color-mix(in srgb, var(--st-running) 25%, transparent);
+}
+.cond-token.is-success {
+  background: color-mix(in srgb, var(--st-success) 30%, transparent);
+}
+.cond-token.is-failure {
+  background: color-mix(in srgb, var(--st-failure) 30%, transparent);
+}
+.cond-token.was-success {
+  background: color-mix(in srgb, var(--st-success) 12%, transparent);
+}
+.cond-token.was-failure {
+  background: color-mix(in srgb, var(--st-failure) 12%, transparent);
+}
+
+.bt-node-ports {
+  border-top: 1px solid var(--border);
+  padding: 4px 10px 5px;
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 11px;
+}
+.bt-node-port {
+  display: flex;
+  gap: 6px;
+  line-height: 17px;
+  white-space: nowrap;
+}
+.bt-node-port .k {
+  color: var(--muted);
+}
+.bt-node-port .k::after {
+  content: ":";
+}
+.bt-node-port .v {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bt-node-more {
+  color: var(--muted);
+  font-size: 10px;
+}
+.bt-node-expand {
+  position: absolute;
+  right: -10px;
+  bottom: -10px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 50%;
+  font-weight: 700;
+  line-height: 1;
+  z-index: 2;
+}
+.bt-node-status {
+  position: absolute;
+  top: -9px;
+  right: 8px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 6px;
+  color: #fff;
+  background: var(--s);
+}
+.bt-node .react-flow__handle {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Plain-language edge labels and decorator hints */
+.bt-edge-label {
+  position: absolute;
+  pointer-events: all;
+  cursor: help;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 3px 7px;
+  border-radius: 9px;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+.bt-edge-label.is-running {
+  border-color: var(--st-running);
+}
+.bt-edge-label.is-success {
+  border-color: var(--st-success);
+}
+.bt-edge-label.is-failure {
+  border-color: var(--st-failure);
+}
+.bt-node-hint {
+  padding: 0 10px 4px 32px;
+  margin-top: -2px;
+  font-size: 12px;
+  color: var(--c);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: help;
+}
+
+/* Locked window around an expanded SubTree's nodes: they belong to another tree's file. */
+.bt-window {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 2px solid color-mix(in srgb, var(--cat-subtree) 55%, var(--border));
+  border-radius: 12px;
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      color-mix(in srgb, var(--cat-subtree) 7%, transparent) 0 8px,
+      transparent 8px 16px
+    ),
+    color-mix(in srgb, var(--cat-subtree) 4%, transparent);
+}
+.bt-window.lr {
+  flex-direction: row;
+}
+.bt-window-header {
+  pointer-events: auto;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 0 10px;
+  border-radius: 10px 10px 0 0;
+  background: color-mix(in srgb, var(--cat-subtree) 16%, var(--node-bg));
+  border-bottom: 1px solid color-mix(in srgb, var(--cat-subtree) 35%, var(--border));
+  font-size: 12px;
+  cursor: default;
+}
+.bt-window.lr .bt-window-header {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 10px 0 0 10px;
+  border-bottom: none;
+  border-right: 1px solid color-mix(in srgb, var(--cat-subtree) 35%, var(--border));
+}
+.bt-window-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bt-window.lr .bt-window-title {
+  flex: none;
+  max-width: 100%;
+}
+.bt-window .react-flow__handle {
+  opacity: 0;
+  pointer-events: none;
+}
+.bt-node.readonly:active,
+.bt-frame.readonly .bt-frame-header:active,
+.bt-window-header:active {
+  cursor: not-allowed;
+}
+
+/* Decorator frames: the decorator's content is the header; the rest of the frame surrounds the
+   subtree it decorates and lets clicks through to it. */
+.bt-frame {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1.5px dashed color-mix(in srgb, var(--c) 55%, var(--border));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--c) 5%, transparent);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.bt-frame.lr {
+  flex-direction: row;
+}
+.bt-frame-header {
+  position: relative;
+  pointer-events: auto;
+  flex: none;
+  border-radius: 10px 10px 0 0;
+  background: color-mix(in srgb, var(--c) 10%, var(--node-bg));
+  border-bottom: 1px solid color-mix(in srgb, var(--c) 30%, var(--border));
+  cursor: grab;
+}
+.bt-frame.lr .bt-frame-header {
+  border-radius: 10px 0 0 10px;
+  border-bottom: none;
+  border-right: 1px solid color-mix(in srgb, var(--c) 30%, var(--border));
+}
+.bt-frame.selected {
+  border-style: solid;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.bt-frame.readonly {
+  opacity: 0.85;
+}
+.bt-frame .react-flow__handle {
+  opacity: 0;
+  pointer-events: none;
+}
+.bt-frame.is-running {
+  --s: var(--st-running);
+  border-style: solid;
+  border-color: var(--s);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--s) 30%, transparent);
+}
+.bt-frame.is-success {
+  --s: var(--st-success);
+  border-style: solid;
+  border-color: var(--s);
+}
+.bt-frame.is-failure {
+  --s: var(--st-failure);
+  border-style: solid;
+  border-color: var(--s);
+}
+.bt-frame.is-skipped {
+  --s: var(--st-skipped);
+}
+.bt-frame.was-success {
+  border-color: color-mix(in srgb, var(--st-success) 50%, var(--border));
+}
+.bt-frame.was-failure {
+  border-color: color-mix(in srgb, var(--st-failure) 50%, var(--border));
+}
+
+/* Live status. "is-*" is the current status; "was-*" is the last result of a node now IDLE. */
+.bt-node.is-running {
+  --s: var(--st-running);
+  border-color: var(--s);
+  border-left-color: var(--c);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--s) 35%, transparent), var(--shadow);
+}
+.bt-node.is-success {
+  --s: var(--st-success);
+  border-color: var(--s);
+  border-left-color: var(--c);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--s) 30%, transparent);
+}
+.bt-node.is-failure {
+  --s: var(--st-failure);
+  border-color: var(--s);
+  border-left-color: var(--c);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--s) 30%, transparent);
+}
+.bt-node.is-skipped {
+  --s: var(--st-skipped);
+  border-color: var(--s);
+  border-left-color: var(--c);
+}
+.bt-node.was-success {
+  border-color: color-mix(in srgb, var(--st-success) 45%, var(--border));
+  border-left-color: var(--c);
+}
+.bt-node.was-failure {
+  border-color: color-mix(in srgb, var(--st-failure) 45%, var(--border));
+  border-left-color: var(--c);
+}
+.bt-edge {
+  stroke: var(--muted) !important;
+  stroke-width: 1.5;
+}
+.bt-edge.is-running {
+  stroke: var(--st-running) !important;
+  stroke-width: 2.5;
+}
+.bt-edge.is-success {
+  stroke: var(--st-success) !important;
+  stroke-width: 2;
+}
+.bt-edge.is-failure {
+  stroke: var(--st-failure) !important;
+  stroke-width: 2;
+}
+
+/* Nodes. Diff colors go on the border and background only, so selection still shows. */
+.bt-node.diff-added,
+.bt-frame.diff-added {
+  --d: var(--diff-add);
+}
+.bt-node.diff-removed,
+.bt-frame.diff-removed {
+  --d: var(--diff-del);
+}
+.bt-node.diff-changed,
+.bt-frame.diff-changed {
+  --d: var(--diff-mod);
+}
+.bt-node.diff-moved,
+.bt-node.diff-moved-away,
+.bt-frame.diff-moved {
+  --d: var(--diff-move);
+}
+.bt-node.diff-inner {
+  --d: var(--diff-mod);
+}
+.bt-node:is(.diff-added, .diff-removed, .diff-changed, .diff-moved, .diff-moved-away, .diff-inner) {
+  border-color: var(--d);
+  border-width: 2px;
+  border-left-width: 4px;
+  border-left-color: var(--c);
+  background: color-mix(in srgb, var(--d) 7%, var(--node-bg));
+}
+.bt-node.diff-removed {
+  opacity: 0.7;
+  border-style: dashed;
+  border-left-style: solid;
+}
+.bt-node.diff-removed .bt-node-title,
+.bt-node.diff-removed .bt-node-name {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--diff-del) 70%, transparent);
+}
+/* Where a node used to be: a faint outline that points at its new place. */
+.bt-node.diff-moved-away {
+  opacity: 0.5;
+  border-style: dotted;
+  border-left-style: dotted;
+  border-left-color: var(--d);
+  background: transparent;
+  box-shadow: none;
+}
+.bt-frame:is(.diff-added, .diff-removed, .diff-changed, .diff-moved) {
+  border-color: var(--d);
+  border-width: 2px;
+}
+.bt-frame:is(.diff-added, .diff-removed, .diff-changed, .diff-moved) > .bt-frame-header {
+  background: color-mix(in srgb, var(--d) 12%, var(--node-bg));
+}
+.bt-frame.diff-removed {
+  opacity: 0.75;
+}
+.bt-node-diff {
+  position: absolute;
+  top: -9px;
+  left: 10px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 6px;
+  color: #fff;
+  background: var(--d, var(--muted));
+  white-space: nowrap;
+  pointer-events: none;
+}
+.bt-frame-header .bt-node-diff {
+  top: 4px;
+  left: auto;
+  right: 8px;
+}
+/* A node that only gained or lost a wrapper keeps a quiet tag and no color. */
+.bt-node:not(.diff-added, .diff-removed, .diff-changed, .diff-moved, .diff-moved-away, .diff-inner) .bt-node-diff {
+  background: var(--panel-2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+/* Port lines: old value struck through, then the new one. */
+.bt-node-port.diff-changed,
+.bt-node-port.diff-added,
+.bt-node-port.diff-removed {
+  margin: 0 -6px;
+  padding: 0 6px;
+  border-radius: 3px;
+}
+.bt-node-port.diff-changed {
+  background: color-mix(in srgb, var(--diff-mod) 14%, transparent);
+}
+.bt-node-port.diff-added {
+  background: color-mix(in srgb, var(--diff-add) 14%, transparent);
+}
+.bt-node-port.diff-removed {
+  background: color-mix(in srgb, var(--diff-del) 12%, transparent);
+}
+.bt-node-port .v.old,
+.bt-node-port.diff-removed .v,
+.bt-node-port.diff-removed .k {
+  text-decoration: line-through;
+  color: var(--diff-del);
+}
+.bt-node-port .v.old::after {
+  content: " →";
+  display: inline-block;
+  margin-left: 2px;
+  color: var(--muted);
+  text-decoration: none;
+}
+.bt-node-port.diff-added .v,
+.bt-node-port.diff-changed .v:not(.old) {
+  color: var(--diff-add);
+}
+
+/* Folded conditions */
+.cond-token.diff-added {
+  background: color-mix(in srgb, var(--diff-add) 18%, transparent);
+}
+.cond-token.diff-removed {
+  background: color-mix(in srgb, var(--diff-del) 15%, transparent);
+  text-decoration: line-through;
+}
+.cond-token.diff-changed,
+.cond-token.diff-edited {
+  background: color-mix(in srgb, var(--diff-mod) 20%, transparent);
+}
+.cond-token.diff-moved {
+  background: color-mix(in srgb, var(--diff-move) 18%, transparent);
+}
+.cond-token.diff-moved-away {
+  opacity: 0.55;
+  text-decoration: line-through dotted;
+}
+
+/* Edges into added / removed / moved nodes */
+.bt-edge.diff-added {
+  stroke: var(--diff-add) !important;
+  stroke-width: 2;
+}
+.bt-edge.diff-removed {
+  stroke: var(--diff-del) !important;
+  stroke-dasharray: 5 4;
+}
+.bt-edge.diff-moved {
+  stroke: var(--diff-move) !important;
+  stroke-width: 2;
+}
+.bt-edge.diff-moved-away {
+  stroke: var(--diff-move) !important;
+  stroke-dasharray: 2 4;
+  opacity: 0.6;
+}

@@ -1,9 +1,9 @@
 // Tidy-tree layout. BT XML has no coordinates and child order is execution order, so the editor
 // always lays trees out itself: parents centered over their children, one row (or column) per depth.
 
-import { RESERVED_ATTRS, type BTNode, type NodeModel, type TreeDef } from "../shared/model.ts";
-import { joinPath } from "../shared/live_mapping.ts";
-import { modelFor } from "../shared/validate.ts";
+import { RESERVED_ATTRS, type BTNode, type NodeModel, type TreeDef } from "./model.ts";
+import { joinPath } from "./live_mapping.ts";
+import { modelFor } from "./models.ts";
 import { decoratorHint } from "./edge_hints.ts";
 
 /**

@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { Project } from "../src/server/project.ts";
 import { BtLogError, parseBtlog, writeBtlog } from "../src/shared/btlog.ts";
-import { mapRuntimeTree } from "../src/shared/live_mapping.ts";
+import { mapRuntimeTree } from "@coalman321/arborist";
 
 const DEMO = join(import.meta.dirname, "..", "examples", "demo_project");
 // Written by BT::FileLogger2 (BT.CPP 4.9) while the demo project ran at 20 Hz with stub leaf

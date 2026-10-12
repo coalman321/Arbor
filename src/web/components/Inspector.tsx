@@ -1,14 +1,18 @@
 import { useMemo, useState } from "react";
 import {
+  categoryOf,
+  CONDITION_FIRST,
+  iconFor,
   isBlackboardRef,
+  modelFor,
+  nodeStatus,
   PRE_POST_CONDITIONS,
   RESERVED_ATTRS,
   type BTNode,
   type PortDirection,
   type PortModel,
   type TreeDef,
-} from "../../shared/model.ts";
-import { modelFor } from "../../shared/validate.ts";
+} from "@coalman321/arborist";
 import {
   deleteSelected,
   duplicateSelected,
@@ -29,9 +33,6 @@ import {
   useStore,
 } from "../store.ts";
 import { blackboardKeys, mapNode } from "../tree_ops.ts";
-import { useNodeStatus } from "./BTNodeView.tsx";
-import { iconFor } from "./icons.ts";
-import { categoryOf, CONDITION_FIRST, type LayoutItem } from "../layout.ts";
 
 const DIR_ARROW: Record<PortDirection, string> = { input: "→", output: "←", inout: "↔" };
 const DIR_TITLE: Record<PortDirection, string> = { input: "input port", output: "output port", inout: "bidirectional port" };
@@ -83,8 +84,7 @@ function NodeInspector({ path, tree, node, readOnly }: { path: string; tree: Tre
   const diagnostics = useDiagnostics();
   const model = modelFor(node, models);
   const category = categoryOf(node, models);
-  const item = { path, treeId: tree.id, node } as LayoutItem;
-  const status = useNodeStatus(item, liveTree === active);
+  const status = useStore((s) => nodeStatus(s.live, path, tree.id, node.uid, liveTree === active));
   const problems = diagnostics.filter((d) => d.treeId === tree.id && d.nodeUid === node.uid);
   const bbKeys = useMemo(() => blackboardKeys(tree.root), [tree.root]);
   const [showAdvanced, setShowAdvanced] = useState(PRE_POST_CONDITIONS.some((c) => node.attrs[c.name] !== undefined));

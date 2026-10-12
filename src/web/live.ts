@@ -1,11 +1,19 @@
 // Client side of the live view: talks btlive (docs/live_protocol.md) to the robot through the
 // backend's relay socket and folds status changes into the store.
 
-import { mapRuntimeTree, type Mapping } from "../shared/live_mapping.ts";
-import type { ClientMessage, RelayMsg, RobotMessage } from "../shared/protocol.ts";
+import {
+  derive,
+  foldStatusChanges,
+  mapRuntimeTree,
+  snapshotStatuses,
+  type ClientMessage,
+  type Mapping,
+  type RobotMessage,
+} from "@coalman321/arborist";
+import type { RelayMsg } from "../shared/relay.ts";
 import { wsUrl } from "./api.ts";
 import { closeReplay } from "./replay.ts";
-import { FINISHED, initialLive, localStorageSet, openTree, toast, useStore, type LiveState, type LogEntry, type StatusInfo } from "./store.ts";
+import { initialLive, localStorageSet, openTree, toast, useStore, type LiveState, type LogEntry } from "./store.ts";
 
 const LOG_LIMIT = 2000;
 
@@ -100,41 +108,15 @@ function handle(msg: RobotMessage | RelayMsg) {
     }
     case "snapshot": {
       if (msg.session !== live.session || live.paused) return;
-      const statusByUid: Record<number, StatusInfo> = {};
-      for (const [uid, status] of msg.statuses) statusByUid[uid] = { status, last: status, t: msg.t };
-      setLive({ statusByUid, ...derive(statusByUid, live.mapping), runStart: undefined });
+      setLive({ ...snapshotStatuses(msg.statuses, msg.t, live.mapping), runStart: undefined });
       return;
     }
     case "status": {
       if (msg.session !== live.session || live.paused) return;
-      let statusByUid = { ...live.statusByUid };
-      const statusByPath = { ...live.statusByPath };
-      const statusByDef = { ...live.statusByDef };
-      const entries: LogEntry[] = [];
-      const rootUid = live.runtime?.[0]?.uid;
-      let runStart = live.runStart;
-      let restarted = false;
-      for (const [t, uid, prev, status] of msg.changes) {
-        if (uid === rootUid && status === "RUNNING" && prev !== "RUNNING") {
-          // A new run: the previous run's results fade.
-          runStart = t;
-          restarted = true;
-          statusByUid = Object.fromEntries(Object.entries(statusByUid).map(([k, v]) => [k, v.done ? { ...v, done: false } : v]));
-        }
-        const old = statusByUid[uid];
-        const info: StatusInfo = { status, last: status === "IDLE" ? (old?.last ?? prev) : status, t };
-        // Reset to IDLE after finishing in this run (a node halted while RUNNING still fades).
-        if (status === "IDLE" && FINISHED.has(prev) && (runStart === undefined || (old?.t ?? t) >= runStart)) info.done = true;
-        statusByUid[uid] = info;
-        const m = live.mapping?.byRuntimeUid.get(uid);
-        if (m) {
-          statusByPath[m.path] = info;
-          statusByDef[`${m.treeId}:${m.nodeUid}`] = info;
-        }
-        entries.push({ t, uid, prev, status });
-      }
+      const statuses = foldStatusChanges(live, msg.changes, live.mapping, live.runtime?.[0]?.uid);
+      const entries: LogEntry[] = msg.changes.map(([t, uid, prev, status]) => ({ t, uid, prev, status }));
       const log = live.log.length + entries.length > LOG_LIMIT ? [...live.log, ...entries].slice(-LOG_LIMIT) : [...live.log, ...entries];
-      setLive({ statusByUid, ...(restarted ? derive(statusByUid, live.mapping) : { statusByPath, statusByDef }), log, runStart });
+      setLive({ ...statuses, log });
       return;
     }
     case "blackboard":
@@ -148,21 +130,6 @@ function handle(msg: RobotMessage | RelayMsg) {
 
 export function computeMapping(treeId: string, nodes: NonNullable<LiveState["runtime"]>): Mapping {
   return mapRuntimeTree(treeId, nodes, new Map(Object.entries(get().trees)));
-}
-
-export function derive(statusByUid: Record<number, StatusInfo>, mapping: Mapping | undefined) {
-  const statusByPath: Record<string, StatusInfo> = {};
-  const statusByDef: Record<string, StatusInfo> = {};
-  if (mapping) {
-    for (const [uid, info] of Object.entries(statusByUid)) {
-      const m = mapping.byRuntimeUid.get(Number(uid));
-      if (!m) continue;
-      statusByPath[m.path] = info;
-      const key = `${m.treeId}:${m.nodeUid}`;
-      if (!statusByDef[key] || statusByDef[key].t < info.t) statusByDef[key] = info;
-    }
-  }
-  return { statusByPath, statusByDef };
 }
 
 // Editing a tree while live changes its node uids/structure: re-pair the robot's nodes.

@@ -2,9 +2,9 @@
 // live state the robot connection uses, so the canvas colors nodes exactly as it does live.
 
 import { BtLogError, parseBtlog, STATUS_BY_CODE, type BtLog } from "../shared/btlog.ts";
-import type { NodeStatus } from "../shared/protocol.ts";
-import { computeMapping, derive, disconnectLive } from "./live.ts";
-import { FINISHED, initialLive, openTree, toast, useStore, type LogEntry, type StatusInfo } from "./store.ts";
+import { derive, FINISHED, type NodeStatus, type StatusInfo } from "@coalman321/arborist";
+import { computeMapping, disconnectLive } from "./live.ts";
+import { initialLive, openTree, toast, useStore, type LogEntry } from "./store.ts";
 
 /** Transitions between saved snapshots of every node's status, for fast seeking. */
 const CHECKPOINT_EVERY = 256;
