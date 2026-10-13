@@ -4,6 +4,7 @@
 import { allowedChildren, modelFor, projectModels, type BTNode, type NodeModel } from "@coalman321/arborist";
 import { createTree, editRoot, fileNameFor, openTree, resolvePath, toast, useStore } from "./store.ts";
 import {
+  blackboardKeyTypes,
   cloneWithNewUids,
   findIn,
   insertAt,
@@ -197,7 +198,8 @@ export function extractToSubtree(treeId: string, uid: string, newId: string, fil
     n.children.forEach(visit);
   };
   visit(node);
-  const ports = [...keys].sort().map((k) => ({ name: k, direction: "inout" as const }));
+  const types = blackboardKeyTypes(node, models());
+  const ports = [...keys].sort().map((k) => ({ name: k, direction: "inout" as const, ...(types.has(k) ? { type: types.get(k) } : {}) }));
   const err = createTree(newId, file || fileNameFor(newId), cloneWithNewUids(node), ports);
   if (err) return err;
   const ref = makeNode("SubTree", { ID: newId, ...Object.fromEntries([...keys].sort().map((k) => [k, `{${k}}`])) });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { BTNode } from "@coalman321/arborist";
-import { insertAt, moveNode, removeNode, reorder, unwrapNode, wrapNode } from "../src/web/tree_ops.ts";
+import { projectModels, type BTNode } from "@coalman321/arborist";
+import { blackboardKeyTypes, insertAt, moveNode, removeNode, reorder, unwrapNode, wrapNode } from "../src/web/tree_ops.ts";
 
 const n = (uid: string, children: BTNode[] = [], type = "Sequence"): BTNode => ({ uid, type, attrs: {}, children });
 const shape = (x: BTNode | null): unknown => (x ? (x.children.length ? { [x.uid]: x.children.map(shape) } : x.uid) : null);
@@ -41,5 +41,28 @@ describe("tree_ops", () => {
     expect(shape(wrapNode(tree(), "b", n("w", [], "Inverter")))).toEqual({ root: [{ a: ["a1", "a2"] }, { w: ["b"] }] });
     expect(shape(wrapNode(tree(), "root", n("w", [], "Inverter")))).toEqual({ w: [{ root: [{ a: ["a1", "a2"] }, "b"] }] });
     expect(shape(unwrapNode(tree(), "a"))).toEqual({ root: ["a1", "a2", "b"] });
+  });
+});
+
+describe("blackboardKeyTypes", () => {
+  it("types keys wired to typed ports, unless the ports disagree", () => {
+    const models = projectModels(
+      [
+        { id: "SetMode", category: "Action", source: "spec", ports: [{ name: "mode", direction: "input", type: "Mode" }] },
+        { id: "Wait", category: "Action", source: "spec", ports: [{ name: "msec", direction: "input", type: "int" }] },
+      ],
+      [],
+    );
+    const root: BTNode = {
+      uid: "r",
+      type: "Sequence",
+      attrs: {},
+      children: [
+        { uid: "a", type: "SetMode", attrs: { mode: "{m}" }, children: [] },
+        { uid: "b", type: "Wait", attrs: { msec: "{t}" }, children: [] },
+        { uid: "c", type: "SetMode", attrs: { mode: "{t}" }, children: [] },
+      ],
+    };
+    expect([...blackboardKeyTypes(root, models)]).toEqual([["m", "Mode"]]);
   });
 });

@@ -2,13 +2,17 @@ import { useMemo, useState } from "react";
 import {
   categoryOf,
   CONDITION_FIRST,
+  enumForType,
+  findEnumValue,
   iconFor,
   isBlackboardRef,
+  literalProblem,
   modelFor,
   nodeStatus,
   PRE_POST_CONDITIONS,
   RESERVED_ATTRS,
   type BTNode,
+  type EnumModel,
   type PortDirection,
   type PortModel,
   type TreeDef,
@@ -29,14 +33,16 @@ import {
   togglePanel,
   treesUsing,
   useDiagnostics,
+  useEnums,
   useModels,
   useStore,
 } from "../store.ts";
-import { blackboardKeys, mapNode } from "../tree_ops.ts";
+import { blackboardKeys, blackboardKeyTypes, mapNode } from "../tree_ops.ts";
 
 const DIR_ARROW: Record<PortDirection, string> = { input: "→", output: "←", inout: "↔" };
 const DIR_TITLE: Record<PortDirection, string> = { input: "input port", output: "output port", inout: "bidirectional port" };
 const SCRIPT_PORTS = new Set(["code", "if"]);
+
 
 function setAttr(attrs: Record<string, string>, key: string, value: string | undefined): Record<string, string> {
   const out: Record<string, string> = {};
@@ -78,6 +84,7 @@ export function Inspector() {
 
 function NodeInspector({ path, tree, node, readOnly }: { path: string; tree: TreeDef; node: BTNode; readOnly: boolean }) {
   const models = useModels();
+  const enums = useEnums();
   const trees = useStore((s) => s.trees);
   const liveTree = useStore((s) => (s.live.state === "connected" || s.live.state === "replay" ? s.live.treeId : undefined));
   const active = useStore((s) => s.active)!;
@@ -211,6 +218,7 @@ function NodeInspector({ path, tree, node, readOnly }: { path: string; tree: Tre
             value={node.attrs[p.name]}
             onChange={(v) => update(p.name, v)}
             bbKeys={bbKeys}
+            enums={enums}
             subtreeAuto={isSubTree && node.attrs._autoremap === "true"}
           />
         ))}
@@ -339,31 +347,31 @@ function PortField({
   value,
   onChange,
   bbKeys,
+  enums,
   subtreeAuto,
 }: {
   port: PortModel;
   value: string | undefined;
   onChange: (v: string | undefined) => void;
   bbKeys: string[];
+  /** The spec's enums by type; a port of an enum type picks its literal from a list. */
+  enums: Map<string, EnumModel>;
   subtreeAuto: boolean;
 }) {
   const type = port.type ?? "";
+  const enumModel = enumForType(port.type, enums);
+  const problem = value && port.direction === "input" ? literalProblem(port.type, value, enums) : undefined;
   const listId = `bb-${port.name}`;
+  // BT.CPP may write an enum default as its integer; show the name.
+  const defaultLabel = port.default !== undefined && enumModel ? (findEnumValue(enumModel, port.default)?.name ?? port.default) : port.default;
   const placeholder =
-    port.default !== undefined ? `default: ${port.default}` : subtreeAuto ? `auto: {${port.name}}` : port.direction === "input" ? "required" : "unused";
+    defaultLabel !== undefined ? `default: ${defaultLabel}` : subtreeAuto ? `auto: {${port.name}}` : port.direction === "input" ? "required" : "unused";
   const isRef = value !== undefined && isBlackboardRef(value);
+  const enumValue = enumModel && value !== undefined && !isRef ? findEnumValue(enumModel, value) : undefined;
 
   let input;
-  if ((type === "bool" || type === "BT::NodeStatus") && !isRef) {
-    const options = type === "bool" ? ["true", "false"] : ["SUCCESS", "FAILURE", "RUNNING", "SKIPPED", "IDLE"];
-    input = (
-      <select value={value ?? ""} onChange={(e) => onChange(e.target.value || undefined)}>
-        <option value="">{placeholder}</option>
-        {options.map((o) => (
-          <option key={o}>{o}</option>
-        ))}
-      </select>
-    );
+  if (enumModel && port.direction !== "output" && !isRef) {
+    input = <EnumSelect enumModel={enumModel} value={value} emptyLabel={placeholder} problem={problem} onChange={onChange} />;
   } else if (SCRIPT_PORTS.has(port.name) && !isRef) {
     input = (
       <textarea className="mono" rows={2} value={value ?? ""} placeholder={placeholder} onChange={(e) => onChange(e.target.value === "" ? undefined : e.target.value)} />
@@ -372,7 +380,7 @@ function PortField({
     input = (
       <>
         <input
-          className={isRef ? "mono bb" : "mono"}
+          className={`mono${isRef ? " bb" : ""}${problem ? " invalid" : ""}`}
           list={listId}
           value={value ?? ""}
           placeholder={placeholder}
@@ -416,7 +424,76 @@ function PortField({
         )}
       </div>
       {port.description && <span className="field-help">{port.description}</span>}
+      {enumValue?.description && <span className="field-help">{enumValue.name}: {enumValue.description}</span>}
     </div>
+  );
+}
+
+/** Picks a value of `enumModel`. A literal that isn't in the list stays selectable, flagged, rather than showing as unset. */
+function EnumSelect({
+  enumModel,
+  value,
+  emptyLabel,
+  problem,
+  onChange,
+}: {
+  enumModel: EnumModel;
+  value: string | undefined;
+  emptyLabel: string;
+  /** What's wrong with `value`, from literalProblem(). */
+  problem?: string;
+  onChange: (v: string | undefined) => void;
+}) {
+  const unknown = value !== undefined && !enumModel.values.some((v) => v.name === value);
+  const alias = unknown ? findEnumValue(enumModel, value)?.name : undefined;
+  return (
+    <select className={problem ? "invalid" : undefined} value={value ?? ""} onChange={(e) => onChange(e.target.value || undefined)}>
+      <option value="">{emptyLabel}</option>
+      {enumModel.values.map((v) => (
+        <option key={v.name} value={v.name} title={v.description}>
+          {v.name}
+        </option>
+      ))}
+      {unknown && (
+        <option value={value}>
+          {value}
+          {problem ? ` (${problem})` : alias ? ` (${alias})` : ""}
+        </option>
+      )}
+    </select>
+  );
+}
+
+/** An enum's values when the type is an enum (a blackboard reference stays free text), else a text field. */
+/** A value of `type`: picked from a list for an enum (a blackboard reference stays free text), else typed. */
+function TypedValueInput({
+  type,
+  enums,
+  value,
+  placeholder,
+  emptyLabel,
+  onChange,
+}: {
+  type: string | undefined;
+  enums: Map<string, EnumModel>;
+  value: string | undefined;
+  placeholder: string;
+  emptyLabel: string;
+  onChange: (v: string | undefined) => void;
+}) {
+  const enumModel = enumForType(type, enums);
+  const problem = value ? literalProblem(type, value, enums) : undefined;
+  if (enumModel && !(value !== undefined && isBlackboardRef(value))) {
+    return <EnumSelect enumModel={enumModel} value={value} emptyLabel={emptyLabel} problem={problem} onChange={onChange} />;
+  }
+  return (
+    <input
+      className={problem ? "mono invalid" : "mono"}
+      title={problem && `"${value}" is ${problem}`}
+      placeholder={placeholder}
+      value={value ?? ""}
+      onChange={(e) => onChange(e.target.value === "" ? undefined : e.target.value)}
+    />
   );
 }
 
@@ -424,6 +501,8 @@ function TreeInspector({ tree }: { tree: TreeDef }) {
   const files = useStore((s) => s.files);
   const trees = useStore((s) => s.trees);
   const file = files[tree.file];
+  const models = useModels();
+  const enums = useEnums();
   const usedBy = useMemo(() => treesUsing(trees, tree.id), [trees, tree.id]);
   const count = useMemo(() => {
     let c = 0;
@@ -495,16 +574,17 @@ function TreeInspector({ tree }: { tree: TreeDef }) {
             <input
               className="mono"
               placeholder="type"
+              list="tree-port-enum-types"
               value={p.type ?? ""}
               onChange={(e) => setPorts((ps) => ps.map((q, j) => (j === i ? { ...q, type: e.target.value || undefined } : q)), `${tree.id}:port${i}:type`)}
             />
-            <input
-              className="mono"
+            <TypedValueInput
+              type={p.type}
+              enums={enums}
               placeholder="default"
-              value={p.default ?? ""}
-              onChange={(e) =>
-                setPorts((ps) => ps.map((q, j) => (j === i ? { ...q, default: e.target.value === "" ? undefined : e.target.value } : q)), `${tree.id}:port${i}:def`)
-              }
+              emptyLabel="no default"
+              value={p.default}
+              onChange={(v) => setPorts((ps) => ps.map((q, j) => (j === i ? { ...q, default: v } : q)), `${tree.id}:port${i}:def`)}
             />
           </div>
           <input
@@ -516,19 +596,25 @@ function TreeInspector({ tree }: { tree: TreeDef }) {
           />
         </div>
       ))}
+      <datalist id="tree-port-enum-types">
+        {[...enums.keys()].map((t) => (
+          <option key={t} value={t} />
+        ))}
+      </datalist>
       <div className="row">
         <button onClick={() => setPorts((ps) => [...ps, { name: `port${ps.length + 1}`, direction: "input" }])}>+ Add port</button>
         {tree.root && (
           <button
             title="Declare every {key} used in this tree as an in/out port"
-            onClick={() =>
+            onClick={() => {
+              const types = blackboardKeyTypes(tree.root, models);
               setPorts((ps) => [
                 ...ps,
                 ...blackboardKeys(tree.root)
                   .filter((k) => !ps.some((p) => p.name === k))
-                  .map((k) => ({ name: k, direction: "inout" as const })),
-              ])
-            }
+                  .map((k) => ({ name: k, direction: "inout" as const, ...(types.has(k) ? { type: types.get(k) } : {}) })),
+              ]);
+            }}
           >
             + From blackboard keys
           </button>

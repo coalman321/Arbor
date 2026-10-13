@@ -494,6 +494,7 @@ function RenameDialog({ treeId, close }: { treeId: string; close: () => void }) 
 
 function NodeTypeDialog({ modelId, close }: { modelId?: string; close: () => void }) {
   const specModels = useStore((s) => s.specModels);
+  const specEnums = useStore((s) => s.specEnums);
   const specFile = useStore((s) => s.manifest?.nodes ?? "nodes.xml");
   const models = useModels();
   const original = modelId ? specModels.find((m) => m.id === modelId) : undefined;
@@ -582,10 +583,26 @@ function NodeTypeDialog({ modelId, close }: { modelId?: string; close: () => voi
                 <input className="mono" value={p.name} onChange={(e) => setPort(i, { name: e.target.value })} />
               </td>
               <td>
-                <input className="mono" value={p.type ?? ""} placeholder="std::string" onChange={(e) => setPort(i, { type: e.target.value || undefined })} />
+                <input
+                  className="mono"
+                  list="spec-enum-types"
+                  value={p.type ?? ""}
+                  placeholder="std::string"
+                  onChange={(e) => setPort(i, { type: e.target.value || undefined })}
+                />
               </td>
               <td>
-                <input className="mono" value={p.default ?? ""} onChange={(e) => setPort(i, { default: e.target.value === "" ? undefined : e.target.value })} />
+                <input
+                  className="mono"
+                  list={`spec-enum-values-${i}`}
+                  value={p.default ?? ""}
+                  onChange={(e) => setPort(i, { default: e.target.value === "" ? undefined : e.target.value })}
+                />
+                <datalist id={`spec-enum-values-${i}`}>
+                  {specEnums
+                    .find((e) => e.type === p.type)
+                    ?.values.map((v) => <option key={v.name} value={v.name} />)}
+                </datalist>
               </td>
               <td>
                 <input value={p.description ?? ""} onChange={(e) => setPort(i, { description: e.target.value || undefined })} />
@@ -599,6 +616,11 @@ function NodeTypeDialog({ modelId, close }: { modelId?: string; close: () => voi
           ))}
         </tbody>
       </table>
+      <datalist id="spec-enum-types">
+        {specEnums.map((e) => (
+          <option key={e.type} value={e.type} />
+        ))}
+      </datalist>
       <button type="button" onClick={() => setPorts([...ports, { name: `port${ports.length + 1}`, direction: "input", type: "std::string" }])}>
         + Add port
       </button>

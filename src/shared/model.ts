@@ -2,7 +2,7 @@
 // The frontend never sees XML from disk: the backend parses project files into these types and
 // writes them back out with serializeTreeFile() from ./xml_write.ts.
 
-import type { Diagnostic, LoadedFile, NodeModel, TreeDef } from "@coalman321/arborist";
+import type { Diagnostic, EnumModel, LoadedFile, NodeModel, TreeDef } from "@coalman321/arborist";
 
 export interface TreeFile extends LoadedFile {
   /** Content hash when loaded; sent back on save to detect edits made outside the editor. */
@@ -23,6 +23,8 @@ export interface ProjectSnapshot {
   manifest: ProjectManifest;
   /** Models from the spec file only; builtins are added by the frontend (see projectModels). */
   specModels: NodeModel[];
+  /** Enums from the spec file's <Enums> section. */
+  specEnums: EnumModel[];
   /** Raw sha of the spec file contents, so the client can tell when it was regenerated. */
   specVersion: string;
   files: TreeFile[];

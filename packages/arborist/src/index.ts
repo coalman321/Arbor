@@ -5,6 +5,7 @@
 export * from "./model.ts";
 export * from "./builtins.ts";
 export * from "./models.ts";
+export * from "./port_types.ts";
 export * from "./xml_read.ts";
 export * from "./load.ts";
 export * from "./layout.ts";

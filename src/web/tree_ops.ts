@@ -1,7 +1,7 @@
 // Immutable edits on BTNode trees. Every function returns a new root and shares untouched subtrees,
 // so the store can keep old roots around as undo history.
 
-import type { BTNode } from "@coalman321/arborist";
+import { isBlackboardRef, modelFor, type BTNode, type NodeModel } from "@coalman321/arborist";
 
 let counter = 0;
 export function newUid(): string {
@@ -138,4 +138,25 @@ export function blackboardKeys(root: BTNode | null): string[] {
   };
   if (root) visit(root);
   return [...keys].sort();
+}
+
+/**
+ * The type of each blackboard key that is wired straight to a typed port (`port="{key}"`), when all
+ * such ports agree on it. Used to type the ports of a SubTree interface made from those keys.
+ */
+export function blackboardKeyTypes(root: BTNode | null, models: Map<string, NodeModel>): Map<string, string> {
+  const seen = new Map<string, string | null>();
+  const visit = (n: BTNode) => {
+    const ports = modelFor(n, models)?.ports ?? [];
+    for (const p of ports) {
+      const v = n.attrs[p.name];
+      if (!p.type || v === undefined || !isBlackboardRef(v)) continue;
+      const key = v.trim().slice(1, -1);
+      const prev = seen.get(key);
+      seen.set(key, prev === undefined || prev === p.type ? p.type : null);
+    }
+    n.children.forEach(visit);
+  };
+  if (root) visit(root);
+  return new Map([...seen].filter((e): e is [string, string] => e[1] !== null));
 }

@@ -1,7 +1,7 @@
 // Serializes the editor model back to BehaviorTree.CPP v4 XML. Pure string building so the frontend
 // can render the same XML preview the backend writes to disk.
 
-import type { BTNode, NodeModel, PortModel, TreeDef } from "@coalman321/arborist";
+import type { BTNode, EnumModel, NodeModel, PortModel, TreeDef } from "@coalman321/arborist";
 
 const INDENT = "  ";
 
@@ -111,10 +111,35 @@ export function serializeTreeFile(file: TreeFileContent): string {
   return out.join("\n");
 }
 
-/** The node spec file, in the same format as BT::writeTreeNodesModelXML(). */
-export function serializeSpecFile(models: NodeModel[]): string {
+/**
+ * The node spec file: a TreeNodesModel in the same format as BT::writeTreeNodesModelXML(), followed
+ * by an <Enums> section when there are enums.
+ */
+export function serializeSpecFile(models: NodeModel[], enums: EnumModel[] = []): string {
   const out: string[] = ['<?xml version="1.0" encoding="UTF-8"?>', '<root BTCPP_format="4">', `${INDENT}<TreeNodesModel>`];
   for (const model of models) writeModel(model, 2, out);
-  out.push(`${INDENT}</TreeNodesModel>`, "</root>", "");
+  out.push(`${INDENT}</TreeNodesModel>`);
+  if (enums.length) {
+    out.push(`${INDENT}<Enums>`);
+    for (const e of enums) writeEnum(e, 2, out);
+    out.push(`${INDENT}</Enums>`);
+  }
+  out.push("</root>", "");
   return out.join("\n");
+}
+
+function writeEnum(e: EnumModel, depth: number, out: string[]) {
+  const pad = INDENT.repeat(depth);
+  const attrs = attrString({ type: e.type, description: e.description });
+  if (!e.values.length) {
+    out.push(`${pad}<Enum${attrs}/>`);
+    return;
+  }
+  out.push(`${pad}<Enum${attrs}>`);
+  for (const v of e.values) {
+    const va = attrString({ name: v.name, value: v.value === undefined ? undefined : String(v.value) });
+    if (v.description) out.push(`${pad}${INDENT}<Value${va}>${escapeText(v.description)}</Value>`);
+    else out.push(`${pad}${INDENT}<Value${va}/>`);
+  }
+  out.push(`${pad}</Enum>`);
 }
