@@ -9,7 +9,7 @@ import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { loadTrees, parseTreeFile, type Diagnostic, type NodeModel, type XmlFile } from "@coalman321/arborist";
+import { loadTrees, parseSpec, parseTreeFile, type Diagnostic, type EnumModel, type NodeModel, type XmlFile } from "@coalman321/arborist";
 import type { ProjectManifest, ProjectSnapshot, SaveFileRequest, TreeFile } from "../shared/model.ts";
 import { serializeSpecFile, serializeTreeFile } from "../shared/xml_write.ts";
 import { GitRepo } from "./git.ts";
@@ -162,6 +162,7 @@ export class Project {
       root: this.root,
       manifest,
       specModels: loaded.specModels,
+      specEnums: loaded.specEnums,
       specVersion,
       files,
       trees: loaded.trees,
@@ -220,9 +221,21 @@ export class Project {
     this.versions.delete(rel);
   }
 
-  async saveSpec(models: NodeModel[]): Promise<{ version: string }> {
+  /** Rewrites the spec. Without `enums`, the enums already in the file are kept. */
+  async saveSpec(models: NodeModel[], enums?: EnumModel[]): Promise<{ version: string }> {
     const manifest = await this.manifest();
-    const content = serializeSpecFile(models.filter((m) => m.source === "spec"));
+    if (!enums) {
+      enums = [];
+      const old = await this.disk.read(manifest.nodes);
+      if (old !== undefined) {
+        try {
+          enums = parseSpec(old).enums;
+        } catch {
+          // Unparsable before; nothing to preserve.
+        }
+      }
+    }
+    const content = serializeSpecFile(models.filter((m) => m.source === "spec"), enums);
     await this.atomicWrite(manifest.nodes, this.resolvePath(manifest.nodes), content);
     return { version: sha(content) };
   }

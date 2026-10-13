@@ -9,7 +9,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import type { AddressInfo } from "node:net";
 import { extname, join, posix, relative, resolve, sep } from "node:path";
 import { WebSocketServer, type WebSocket } from "ws";
-import type { NodeModel } from "@coalman321/arborist";
+import type { EnumModel, NodeModel } from "@coalman321/arborist";
 import type { AboutInfo, SaveFileRequest } from "../shared/model.ts";
 import { bundledGitInfo } from "./git_binary.ts";
 import { relayToRobot } from "./live_relay.ts";
@@ -121,8 +121,8 @@ export function startServer({ workspace, host, port, loadStatic, vite }: ServerO
         return sendJson(res, 200, {});
       }
       case "PUT /api/spec": {
-        const body = (await readBody(req)) as { models: NodeModel[] };
-        return sendJson(res, 200, await proj().saveSpec(body.models));
+        const body = (await readBody(req)) as { models: NodeModel[]; enums?: EnumModel[] };
+        return sendJson(res, 200, await proj().saveSpec(body.models, body.enums));
       }
       case "GET /api/git/revs": {
         const repo = await proj().git();

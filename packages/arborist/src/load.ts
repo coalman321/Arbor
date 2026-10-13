@@ -1,9 +1,10 @@
 // Turns the XML of a set of tree files (and optionally a node spec) into trees and models. Reading
 // the files is up to the host: Arbor, for one, reads a project directory or a git revision.
 
-import type { Diagnostic, LoadedFile, NodeModel, TreeDef } from "./model.ts";
+import { type Diagnostic, type EnumModel, type LoadedFile, type NodeModel, type TreeDef } from "./model.ts";
 import { projectModels } from "./models.ts";
-import { parseSpecFile, parseTreeFile } from "./xml_read.ts";
+import { literalProblem } from "./port_types.ts";
+import { parseSpec, parseTreeFile } from "./xml_read.ts";
 
 export interface XmlFile {
   /** Path used in diagnostics and TreeDef.file; any naming scheme the host likes. */
@@ -24,6 +25,8 @@ export interface LoadedTrees {
   trees: TreeDef[];
   /** Models from the spec, plus node types only declared in tree files (Groot2 copies them there). */
   specModels: NodeModel[];
+  /** Enums from the spec's <Enums> section. */
+  specEnums: EnumModel[];
   /** Every model by ID, builtins included: what layoutTree() and the viewer take. */
   models: Map<string, NodeModel>;
   /** One entry per input file, in input order. */
@@ -36,9 +39,15 @@ export function loadTrees(input: LoadInput): LoadedTrees {
   const diagnostics: Diagnostic[] = [];
 
   let specModels: NodeModel[] = [];
+  let specEnums: EnumModel[] = [];
   if (input.spec) {
+    const path = input.spec.path;
     try {
-      specModels = parseSpecFile(input.spec.xml);
+      const spec = parseSpec(input.spec.xml);
+      specModels = spec.models;
+      specEnums = spec.enums;
+      for (const w of spec.warnings) diagnostics.push({ severity: "warning", message: w, file: path });
+      diagnostics.push(...checkDefaults(specModels, specEnums, path));
     } catch (e) {
       diagnostics.push({ severity: "error", message: (e as Error).message, file: input.spec.path });
     }
@@ -95,5 +104,18 @@ export function loadTrees(input: LoadInput): LoadedTrees {
   }
 
   const allSpecModels = [...specModels, ...fallback];
-  return { trees, specModels: allSpecModels, models: projectModels(allSpecModels, trees), files, diagnostics };
+  return { trees, specModels: allSpecModels, specEnums, models: projectModels(allSpecModels, trees), files, diagnostics };
+}
+
+/** Port defaults in the spec that BT.CPP couldn't read as their port's type. */
+function checkDefaults(models: NodeModel[], enums: EnumModel[], file: string): Diagnostic[] {
+  const byType = new Map(enums.map((e) => [e.type, e]));
+  const out: Diagnostic[] = [];
+  for (const m of models) {
+    for (const p of m.ports) {
+      const problem = p.default ? literalProblem(p.type, p.default, byType) : undefined;
+      if (problem) out.push({ severity: "warning", message: `${m.id}: default "${p.default}" of port "${p.name}" is ${problem}`, file });
+    }
+  }
+  return out;
 }

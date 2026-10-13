@@ -5,6 +5,7 @@ import {
   type BlackboardMsg,
   type BTNode,
   type Diagnostic,
+  type EnumModel,
   type Mapping,
   type NodeModel,
   type NodeStatus,
@@ -89,6 +90,7 @@ interface State {
   manifest: ProjectManifest | null;
   root: string;
   specModels: NodeModel[];
+  specEnums: EnumModel[];
   specVersion: string;
   loadDiagnostics: Diagnostic[];
   trees: Record<string, TreeDef>;
@@ -159,6 +161,7 @@ export const useStore = create<State>()(() => ({
   manifest: null,
   root: "",
   specModels: [],
+  specEnums: [],
   specVersion: "",
   loadDiagnostics: [],
   trees: {},
@@ -276,6 +279,7 @@ function applySnapshot(snap: ProjectSnapshot) {
       manifest: snap.manifest,
       root: snap.root,
       specModels: snap.specModels,
+      specEnums: snap.specEnums,
       specVersion: snap.specVersion,
       loadDiagnostics: snap.diagnostics,
       trees,
@@ -395,7 +399,7 @@ export async function reconcileWithDisk() {
     loadDiagnostics: snap.diagnostics,
     tabs: s.tabs.filter((id) => trees[id]),
     active: s.active && trees[s.active] ? s.active : (s.tabs.find((id) => trees[id]) ?? null),
-    ...(specChanged ? { specModels: snap.specModels, specVersion: snap.specVersion } : {}),
+    ...(specChanged ? { specModels: snap.specModels, specEnums: snap.specEnums, specVersion: snap.specVersion } : {}),
   });
   if (specChanged) toast("Node spec reloaded from disk");
   else if (reloaded) toast(`Reloaded ${reloaded} file(s) changed on disk`);
@@ -758,17 +762,24 @@ export function useModels(): Map<string, NodeModel> {
   return useMemo(() => projectModels(specModels, Object.values(trees)), [specModels, trees]);
 }
 
+/** The spec's enums by type name, as ports refer to them. */
+export function useEnums(): Map<string, EnumModel> {
+  const specEnums = useStore((s) => s.specEnums);
+  return useMemo(() => new Map(specEnums.map((e) => [e.type, e])), [specEnums]);
+}
+
 export function useDiagnostics(): Diagnostic[] {
   const trees = useStore((s) => s.trees);
   const files = useStore((s) => s.files);
   const loadDiagnostics = useStore((s) => s.loadDiagnostics);
   const models = useModels();
+  const enums = useEnums();
   return useMemo(() => {
     const map = new Map(Object.entries(trees));
     const mains = Object.values(files).map((f) => f.mainTree);
     // Load errors about files are kept; tree-level problems are recomputed live.
-    return [...loadDiagnostics.filter((d) => !d.nodeUid), ...validateProject(map, models, mains)];
-  }, [trees, files, models, loadDiagnostics]);
+    return [...loadDiagnostics.filter((d) => !d.nodeUid), ...validateProject(map, models, mains, enums)];
+  }, [trees, files, models, enums, loadDiagnostics]);
 }
 
 /** Trees that contain a <SubTree ID="treeId"/>. */

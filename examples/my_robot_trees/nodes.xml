@@ -9,7 +9,7 @@
     </Control>
     <Action ID="FollowTrajectory">
       <input_port name="trajectory" type="trajectory">Choreo trajectory name (deploy/choreo/&lt;name&gt;.traj)</input_port>
-      <input_port name="path_state" type="SwerveStates" default="CHOREO_PATH">Swerve state used while following (CHOREO_PATH or CHOREO_PATH_ROTATION_LOCK)</input_port>
+      <input_port name="path_state" type="SwerveStates" default="CHOREO_PATH">Swerve state used while following</input_port>
       <input_port name="end_state" type="SwerveStates" default="IDLE">Swerve state requested when the path finishes or is halted</input_port>
       <input_port name="min_time" type="double" default="0">Minimum seconds on the path before it may succeed</input_port>
       <description>Follow a Choreo trajectory until its end setpoint is reached</description>
@@ -55,4 +55,21 @@
       <description>Flywheel, hood and aim are within tolerance</description>
     </Condition>
   </TreeNodesModel>
+  <Enums>
+    <Enum type="SwerveStates">
+      <Value name="IDLE"/>
+      <Value name="CHOREO_PATH"/>
+      <Value name="CHOREO_PATH_ROTATION_LOCK"/>
+      <Value name="FIELD_CENTRIC_ROTATION_LOCK"/>
+    </Enum>
+    <Enum type="IntakeStates">
+      <Value name="INTAKE"/>
+      <Value name="SQUEEZE"/>
+      <Value name="STORE"/>
+    </Enum>
+    <Enum type="ShooterStates">
+      <Value name="IDLE"/>
+      <Value name="SHOOT"/>
+    </Enum>
+  </Enums>
 </root>

@@ -922,6 +922,12 @@ button.on {
 .sev-error {
   color: var(--error);
 }
+input.invalid,
+select.invalid,
+textarea.invalid {
+  border-color: var(--warning);
+}
+
 .sev-warning {
   color: var(--warning);
 }

@@ -17,10 +17,30 @@ export type PortDirection = "input" | "output" | "inout";
 export interface PortModel {
   name: string;
   direction: PortDirection;
-  /** C++ type as BT.CPP prints it (e.g. "std::string", "int", "Pose2D"). Informational only. */
+  /**
+   * C++ type as BT.CPP prints it (e.g. "std::string", "int", "Pose2D"). Informational, except that
+   * a type named by an EnumModel in the spec limits the port's literal values to that enum's.
+   */
   type?: string;
   /** Default value; a port with a default is optional in the editor's validation. */
   default?: string;
+  description?: string;
+}
+
+export interface EnumValue {
+  name: string;
+  /** Integer value in C++, if the spec gives one. BT.CPP accepts it in place of the name. */
+  value?: number;
+  description?: string;
+}
+
+/**
+ * An enumeration from the node spec's <Enums> section. A port uses it when the port's `type` is
+ * exactly `type`; its literal values should then be one of `values` (or a blackboard entry).
+ */
+export interface EnumModel {
+  type: string;
+  values: EnumValue[];
   description?: string;
 }
 
@@ -109,6 +129,22 @@ export const RESERVED_ATTRS = new Set<string>([
 
 export function isBlackboardRef(value: string): boolean {
   return /^\{[^{}]+\}$/.test(value.trim());
+}
+
+/** The value a port literal names, by name or by integer (BT.CPP's getInput<Enum>() accepts both). */
+export function findEnumValue(e: EnumModel, literal: string): EnumValue | undefined {
+  const text = literal.trim();
+  if (/^-?\d+$/.test(text)) return e.values.find((v) => v.value === Number(text));
+  return e.values.find((v) => v.name === text);
+}
+
+/**
+ * Whether BT.CPP would read `literal` as a value of `e`. Any integer passes when the spec gives no
+ * integer values, since there is nothing to check it against.
+ */
+export function isEnumLiteral(e: EnumModel, literal: string): boolean {
+  if (findEnumValue(e, literal)) return true;
+  return /^-?\d+$/.test(literal.trim()) && e.values.every((v) => v.value === undefined);
 }
 
 /** Number of children a node of this category may have: [min, max]. */

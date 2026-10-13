@@ -4,19 +4,31 @@
 import {
   allowedChildren,
   isBlackboardRef,
+  literalProblem,
   modelFor,
   RESERVED_ATTRS,
   walk,
   type BTNode,
   type Diagnostic,
+  type EnumModel,
   type NodeModel,
   type TreeDef,
 } from "@coalman321/arborist";
 
-export function validateTree(tree: TreeDef, models: Map<string, NodeModel>, trees: Map<string, TreeDef>): Diagnostic[] {
+export function validateTree(
+  tree: TreeDef,
+  models: Map<string, NodeModel>,
+  trees: Map<string, TreeDef>,
+  enums: Map<string, EnumModel> = new Map(),
+): Diagnostic[] {
   const out: Diagnostic[] = [];
   const at = (n: BTNode | null, severity: Diagnostic["severity"], message: string) =>
     out.push({ severity, message, file: tree.file, treeId: tree.id, ...(n ? { nodeUid: n.uid } : {}) });
+
+  for (const p of tree.ports) {
+    const problem = p.default ? literalProblem(p.type, p.default, enums) : undefined;
+    if (problem) at(null, "warning", `Tree "${tree.id}": default "${p.default}" of port "${p.name}" is ${problem}`);
+  }
 
   if (!tree.root) {
     at(null, "warning", `Tree "${tree.id}" is empty`);
@@ -25,7 +37,8 @@ export function validateTree(tree: TreeDef, models: Map<string, NodeModel>, tree
 
   walk(tree.root, (node) => {
     const model = modelFor(node, models);
-    const label = node.attrs.name ? `${node.type} "${node.attrs.name}"` : node.type;
+    const label =
+      node.type === "SubTree" ? `SubTree ${node.attrs.ID ?? ""}`.trim() : node.attrs.name ? `${node.type} "${node.attrs.name}"` : node.type;
 
     if (node.type === "SubTree") {
       const target = node.attrs.ID;
@@ -55,6 +68,8 @@ export function validateTree(tree: TreeDef, models: Map<string, NodeModel>, tree
       if (value !== undefined && p.direction !== "input" && value !== "" && !isBlackboardRef(value) && node.type !== "SubTree") {
         at(node, "warning", `${label}: output port "${p.name}" should name a blackboard entry, e.g. {${p.name}}`);
       }
+      const problem = value && p.direction === "input" ? literalProblem(p.type, value, enums) : undefined;
+      if (problem) at(node, "warning", `${label}: "${value}" is ${problem} (port "${p.name}")`);
     }
     for (const attr of Object.keys(node.attrs)) {
       if (RESERVED_ATTRS.has(attr) || ports.has(attr)) continue;
@@ -78,9 +93,14 @@ function reaches(from: string, target: string, trees: Map<string, TreeDef>, seen
   return found;
 }
 
-export function validateProject(trees: Map<string, TreeDef>, models: Map<string, NodeModel>, mainTrees: (string | undefined)[]): Diagnostic[] {
+export function validateProject(
+  trees: Map<string, TreeDef>,
+  models: Map<string, NodeModel>,
+  mainTrees: (string | undefined)[],
+  enums: Map<string, EnumModel> = new Map(),
+): Diagnostic[] {
   const out: Diagnostic[] = [];
-  for (const t of trees.values()) out.push(...validateTree(t, models, trees));
+  for (const t of trees.values()) out.push(...validateTree(t, models, trees, enums));
   for (const m of mainTrees) {
     if (m && !trees.has(m)) out.push({ severity: "warning", message: `main_tree_to_execute "${m}" is not defined` });
   }

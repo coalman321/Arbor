@@ -41,4 +41,38 @@ describe("loadTrees", () => {
     expect(loaded.models.get("Beep")?.category).toBe("Action");
     expect(loaded.diagnostics).toMatchObject([{ severity: "info", message: expect.stringContaining("add them to nodes.xml") }]);
   });
+
+  it("reads enums from the spec and checks port defaults against them", () => {
+    const xml = `<root BTCPP_format="4">
+      <TreeNodesModel>
+        <Action ID="SetMode">
+          <input_port name="mode" type="Mode" default="FAST"/>
+          <input_port name="fallback" type="Mode" default="1"/>
+          <input_port name="other" type="Mode" default="2"/>
+        </Action>
+      </TreeNodesModel>
+      <Enums>
+        <Enum type="Mode"><Value name="SLOW" value="0">Half speed</Value><Value name="FAST" value="1"/></Enum>
+        <Enum type="Mode"><Value name="X"/></Enum>
+        <Enum type="Empty"/>
+      </Enums></root>`;
+    const loaded = loadTrees({ spec: { path: "nodes.xml", xml }, files: [] });
+    expect(loaded.specEnums).toEqual([
+      { type: "Mode", values: [{ name: "SLOW", value: 0, description: "Half speed" }, { name: "FAST", value: 1 }] },
+      { type: "Empty", values: [] },
+    ]);
+    expect(loaded.diagnostics.map((d) => d.message)).toEqual([
+      'Enum "Mode" is defined more than once; the first definition is used',
+      'Enum "Empty" has no values',
+      'SetMode: default "2" of port "other" is not a Mode value',
+    ]);
+  });
+
+  it("ignores enums in tree files", () => {
+    const xml = `<root BTCPP_format="4"><BehaviorTree ID="T"><AlwaysSuccess/></BehaviorTree>
+      <Enums><Enum type="Mode"><Value name="A"/></Enum></Enums></root>`;
+    const loaded = loadTrees({ files: [{ path: "t.xml", xml }] });
+    expect(loaded.specEnums).toEqual([]);
+    expect(loaded.diagnostics).toMatchObject([{ severity: "warning", file: "t.xml", message: expect.stringContaining("belongs in the node spec") }]);
+  });
 });

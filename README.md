@@ -99,6 +99,28 @@ std::ofstream("path/to/project/nodes.xml") << BT::writeTreeNodesModelXML(factory
 
 The editor reads the spec directly. Builtin nodes (`Sequence`, `RetryUntilSuccessful`, `Script`, ...) are built into the editor and match BT.CPP 4.9. You can also add or edit node types from the editor ("+ Node type"), which is handy for designing a tree before the C++ exists.
 
+#### Enums
+
+`writeTreeNodesModelXML()` gives a port's type but not the values an enum type can take. List them in an `<Enums>` section after the `TreeNodesModel`. A port uses an enum when its `type` is exactly the enum's `type`, namespace included:
+
+```xml
+<root BTCPP_format="4">
+  <TreeNodesModel>
+    <Action ID="SetSwerveState">
+      <input_port name="state" type="SwerveStates">State to request</input_port>
+    </Action>
+  </TreeNodesModel>
+  <Enums>
+    <Enum type="SwerveStates">
+      <Value name="IDLE" value="0">Wheels coast</Value>
+      <Value name="CHOREO_PATH" value="1"/>
+    </Enum>
+  </Enums>
+</root>
+```
+
+The inspector then offers the values in a dropdown, or a blackboard entry through the `{}` button. A literal that isn't one of the values is a warning, not an error. `value` (the integer in C++) and the description are optional. BT.CPP's `getInput()` accepts an enum by its name if the enum is registered with `factory.registerScriptingEnums<T>()`, or by its integer. With `value`s given, the editor accepts those integers too and shows an integer default by its name. Enums belong only in the node spec: an `<Enums>` section in a tree file is ignored with a warning.
+
 ### Tree files
 
 Each file in `trees/` is a normal BT.CPP v4 file. It can hold several `<BehaviorTree>`s, plus a `<TreeNodesModel>` with `<SubTree>` entries that declare the trees' ports. Tree IDs are unique across the project, so a SubTree can reference a tree in any file. To load a project on the robot, register every file:
@@ -116,7 +138,7 @@ The editor writes files in a canonical layout: two-space indent, attributes in t
 
 - **Add nodes:** drag a node from the palette onto a node. Drop on the middle of a node to add it as the node's last child. Drop on its left or right edge (top or bottom edge in left-right layout) to add it as a sibling before or after. You can also double-click a palette entry to add it to the selected node, or press <kbd>A</kbd> to search for a node type to add.
 - **Rearrange:** drag a node (with its children) onto another node, using the same drop zones. You can also use <kbd>Alt</kbd>+<kbd>↑</kbd>/<kbd>↓</kbd> to reorder siblings. Right-click a node for *Wrap in…*, *Change type…*, *Unwrap*, *Duplicate*, copy and paste, and delete.
-- **Edit ports:** select a node and use the inspector on the right. Port types, defaults and descriptions come from the spec. The `{}` button switches a port between a literal value and a blackboard entry. Pre- and post-conditions (`_skipIf`, `_onSuccess`, ...) are under *Pre/post conditions*.
+- **Edit ports:** select a node and use the inspector on the right. Port types, defaults and descriptions come from the spec, and ports of an [enum type](#enums) get a dropdown of its values. The `{}` button switches a port between a literal value and a blackboard entry. Pre- and post-conditions (`_skipIf`, `_onSuccess`, ...) are under *Pre/post conditions*.
 - **SubTrees:** drag a tree from the *Trees* list onto a node to use it as a SubTree. The SubTree's inspector shows the target tree's ports for remapping, and has an auto-remap switch. Click a SubTree's **+** to see its contents inline (read-only), or double-click it to open it. *Extract to SubTree…* moves a selected branch into a new tree. The blackboard keys the branch uses become the new tree's ports, remapped one to one, so behavior is unchanged.
 - **Conditions:** `IfThenElse` and `WhileDoElse` draw their condition (the first child) inside their own box, as `IF battery_ok` or `WHILE ¬IsEstopped ∧ IsArmed`. Only the branches are drawn as children, with *then*/*else* (or *do*/*else*) on their edges. Composite conditions keep their structure: `¬` is an `Inverter`, `∧` a `Sequence`, `∨` a `Fallback`. Click any part to select and edit it, or right-click it for the node menu. In the live view each part is colored by its result. `Precondition`'s `if` script is drawn the same way. The XML is unchanged: the condition is still the first child. A new `IfThenElse`'s first added child becomes its condition (the picker says *Add condition*, then *Add then-branch*).
 - **Decorators** (`RetryUntilSuccessful`, `Timeout`, `Inverter`, `Precondition`, ...) are drawn as a frame around the child they decorate and everything below it. The decorator's own content (type, ports, `Precondition`'s `if`) is the frame's header. Click the header to select the decorator, or drag it to move the decorator with its subtree. The rest of the frame lets clicks through to the nodes inside. In the live view the frame's border shows the decorator's status. **Decorator frames** in the toolbar switches back to separate boxes. A decorator without its child is always a box, so you can drop one in.
