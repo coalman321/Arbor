@@ -251,7 +251,7 @@ export async function loadProject() {
   } catch (e) {
     if (e instanceof ApiError && e.status === 409) {
       setProjectRoot(null);
-      set({ status: "none", loadError: null, projectMoved: null });
+      set({ status: "none", loadError: null, projectMoved: null, diff: null });
       document.title = "Arbor";
     } else set({ status: "error", loadError: (e as Error).message });
   }
@@ -272,6 +272,8 @@ function applySnapshot(snap: ProjectSnapshot) {
       projectMoved: null,
       selection: null,
       expanded: get().root === snap.root ? get().expanded : {},
+      // A comparison of another project's history doesn't apply to this one.
+      diff: get().root === snap.root ? get().diff : null,
       conflicts: [],
       manifest: snap.manifest,
       root: snap.root,
