@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import type { BrowseResult, WorkspaceInfo } from "../../shared/model.ts";
 import { api } from "../api.ts";
 import { useDismiss } from "../dismiss.ts";
-import { pickLogFile } from "./ReplayBar.tsx";
+import { openServerLog } from "../replay.ts";
 import { Logo, Wordmark } from "./Logo.tsx";
 import {
   confirmDiscard,
@@ -40,12 +40,14 @@ const TITLES: Record<BrowseMode, string> = {
   openProject: "Open a project",
   newProject: "Create a new project",
   importTree: "Add a tree file to this project",
+  openLog: "Replay a log file",
 };
 
 const HELP: Record<BrowseMode, string> = {
   openProject: "Pick a project folder: one with a bt_project.json, or a nodes.xml next to a trees folder.",
   newProject: "Pick the folder to create the project in, and give it a name. It gets a nodes.xml and a trees folder with one empty tree.",
   importTree: "Pick a BehaviorTree.CPP .xml file. It is copied into this project's trees folder; the original isn't changed.",
+  openLog: "Pick a .btlog written by BT::FileLogger2 to play it back on the canvas.",
 };
 
 export function BrowseDialog({ mode, close }: { mode: BrowseMode; close: () => void }) {
@@ -84,7 +86,7 @@ export function BrowseDialog({ mode, close }: { mode: BrowseMode; close: () => v
   useEffect(() => {
     if (!info || started.current || navSeq.current > 0) return;
     started.current = true;
-    const start = root ? (mode === "importTree" ? root : parentOf(root)) : info.home;
+    const start = root ? (mode === "importTree" || mode === "openLog" ? root : parentOf(root)) : info.home;
     void go(start).then(() => undefined);
   }, [info]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -95,17 +97,19 @@ export function BrowseDialog({ mode, close }: { mode: BrowseMode; close: () => v
 
   const submit = async () => {
     if (!target) return;
-    if (mode !== "importTree" && !confirmDiscard(mode === "newProject" ? "Create a new project" : "Open another project")) return;
+    if (mode !== "importTree" && mode !== "openLog" && !confirmDiscard(mode === "newProject" ? "Create a new project" : "Open another project")) return;
     setBusy(true);
-    const err = mode === "importTree" ? await importTreeFile(target) : await switchProject(target, mode === "newProject");
+    const err =
+      mode === "importTree" ? await importTreeFile(target) : mode === "openLog" ? await openServerLog(target) : await switchProject(target, mode === "newProject");
     setBusy(false);
     if (err) setError(err);
     else close();
   };
 
-  const entries = listing?.entries.filter((e) => e.kind === "dir" || mode === "importTree") ?? [];
+  const fileKind = mode === "importTree" ? "xml" : mode === "openLog" ? "btlog" : null;
+  const entries = listing?.entries.filter((e) => e.kind === "dir" || e.kind === fileKind) ?? [];
   const submitLabel =
-    mode === "newProject" ? "Create project" : mode === "importTree" ? "Add to project" : target ? `Open ${target.split("/").pop()}` : "Open";
+    mode === "newProject" ? "Create project" : mode === "importTree" ? "Add to project" : mode === "openLog" ? "Replay" : target ? `Open ${target.split("/").pop()}` : "Open";
 
   return (
     <form
@@ -147,7 +151,7 @@ export function BrowseDialog({ mode, close }: { mode: BrowseMode; close: () => v
         {entries.map((e) => {
           const full = join(listing!.path, e.name);
           const isSel = selected === full;
-          const choosable = (mode === "openProject" && e.isProject) || (mode === "importTree" && e.kind === "xml");
+          const choosable = (mode === "openProject" && e.isProject) || (fileKind !== null && e.kind === fileKind);
           return (
             <div
               key={e.name}
@@ -156,9 +160,9 @@ export function BrowseDialog({ mode, close }: { mode: BrowseMode; close: () => v
               className={`browse-entry ${isSel ? "selected" : ""} ${e.kind}`}
               onClick={() => (choosable ? setSelected(full) : e.kind === "dir" ? void go(full) : undefined)}
               onDoubleClick={() => (e.kind === "dir" && !(mode === "openProject" && e.isProject) ? void go(full) : choosable && void submit())}
-              title={choosable ? "Click to pick, double-click to " + (mode === "importTree" ? "add" : "open") : "Click to go into this folder"}
+              title={choosable ? "Click to pick, double-click to " + (mode === "importTree" ? "add" : mode === "openLog" ? "replay" : "open") : "Click to go into this folder"}
             >
-              <span className="browse-icon">{e.kind === "xml" ? "🗎" : e.isProject ? "▣" : "📁"}</span>
+              <span className="browse-icon">{e.kind === "xml" ? "🗎" : e.kind === "btlog" ? "▶" : e.isProject ? "▣" : "📁"}</span>
               <span className="browse-name">{e.name}</span>
               {e.isProject && <span className="chip">project</span>}
               {e.kind === "dir" && choosable && (
@@ -177,7 +181,7 @@ export function BrowseDialog({ mode, close }: { mode: BrowseMode; close: () => v
           );
         })}
         {listing && entries.length === 0 && (
-          <p className="muted pad">{mode === "importTree" ? "No folders or .xml files here." : "No folders here."}</p>
+          <p className="muted pad">{fileKind ? `No folders or .${fileKind} files here.` : "No folders here."}</p>
         )}
       </div>
       {mode === "newProject" && (
@@ -229,14 +233,7 @@ export function ProjectMenu() {
           <button onClick={() => dialog({ dialog: { kind: "browse", mode: "importTree" } })}>Add a tree file…</button>
           <hr />
           <div className="menu-section">Logs</div>
-          <button
-            onClick={() => {
-              setOpen(false);
-              pickLogFile();
-            }}
-          >
-            Replay a log file (.btlog)…
-          </button>
+          <button onClick={() => dialog({ dialog: { kind: "browse", mode: "openLog" } })}>Replay a log file (.btlog)…</button>
           <hr />
           <div className="menu-section">Projects</div>
           <button onClick={() => dialog({ dialog: { kind: "browse", mode: "newProject" } })}>New project…</button>

@@ -3,6 +3,7 @@
 
 import { BtLogError, parseBtlog, STATUS_BY_CODE, type BtLog } from "../shared/btlog.ts";
 import { derive, FINISHED, type NodeStatus, type StatusInfo } from "@coalman321/arborist";
+import { api } from "./api.ts";
 import { computeMapping, disconnectLive } from "./live.ts";
 import { initialLive, openTree, toast, useStore, type LogEntry } from "./store.ts";
 
@@ -72,6 +73,19 @@ export async function openLogFile(file: File) {
     return;
   }
   startReplay(file.name, log);
+}
+
+/** Replays a .btlog on the server's disk. Returns an error message, or null once it's playing. */
+export async function openServerLog(path: string): Promise<string | null> {
+  const name = path.split("/").pop() ?? path;
+  let log: BtLog;
+  try {
+    log = parseBtlog(await api.readLog(path));
+  } catch (e) {
+    return e instanceof BtLogError ? `${name}: ${e.message}` : `Couldn't read ${name}: ${(e as Error).message}`;
+  }
+  startReplay(name, log);
+  return null;
 }
 
 export function startReplay(name: string, log: BtLog) {

@@ -47,6 +47,11 @@ export const api = {
   importTree: (source: string) => call<{ path: string; treeIds: string[] }>("POST", "/api/trees/import", { source }, true),
   workspace: () => call<WorkspaceInfo>("GET", "/api/workspace"),
   browse: (path?: string) => call<BrowseResult>("GET", `/api/fs${path ? `?path=${encodeURIComponent(path)}` : ""}`),
+  readLog: async (path: string) => {
+    const res = await fetch(`/api/logs?path=${encodeURIComponent(path)}`);
+    if (!res.ok) throw new ApiError(((await res.json().catch(() => ({}))) as { error?: string }).error ?? res.statusText, res.status);
+    return res.arrayBuffer();
+  },
   openProject: (path: string) => call<ProjectSnapshot>("POST", "/api/project/open", { path }),
   createProject: (path: string) => call<ProjectSnapshot>("POST", "/api/project/create", { path }),
   forgetRecent: (path: string) => call<WorkspaceInfo>("POST", "/api/recent/forget", { path }),

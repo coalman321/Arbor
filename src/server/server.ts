@@ -91,6 +91,11 @@ export function startServer({ workspace, host, port, loadStatic, vite }: ServerO
         return sendJson(res, 200, await workspace.info());
       case "GET /api/fs":
         return sendJson(res, 200, await workspace.browse(url.searchParams.get("path") ?? workspace.limit ?? homedir()));
+      case "GET /api/logs": {
+        const data = await workspace.readLog(url.searchParams.get("path") ?? "");
+        res.writeHead(200, { "content-type": "application/octet-stream", "cache-control": "no-store" });
+        return res.end(data);
+      }
       case "POST /api/project/open": {
         const { path } = (await readBody(req)) as { path: string };
         await workspace.open(path);

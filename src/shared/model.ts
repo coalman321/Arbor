@@ -67,7 +67,7 @@ export interface BrowseResult {
   path: string;
   parent: string | null;
   isProject: boolean;
-  entries: { name: string; kind: "dir" | "xml"; isProject?: boolean }[];
+  entries: { name: string; kind: "dir" | "xml" | "btlog"; isProject?: boolean }[];
 }
 
 /** The pseudo-revision for the project files as they are on disk now (saved edits only). */

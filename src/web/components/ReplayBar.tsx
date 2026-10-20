@@ -1,17 +1,5 @@
-import { closeReplay, openLogFile, pause, seek, setSpeed, SPEEDS, step, togglePlay } from "../replay.ts";
+import { closeReplay, pause, seek, setSpeed, SPEEDS, step, togglePlay } from "../replay.ts";
 import { useStore } from "../store.ts";
-
-/** Lets the user pick a .btlog from their computer and starts playing it. */
-export function pickLogFile() {
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = ".btlog";
-  input.onchange = () => {
-    const file = input.files?.[0];
-    if (file) void openLogFile(file);
-  };
-  input.click();
-}
 
 function fmt(ms: number): string {
   const s = ms / 1000;
