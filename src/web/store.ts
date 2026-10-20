@@ -65,7 +65,7 @@ export interface PickerState {
   uid?: string;
 }
 
-export type BrowseMode = "openProject" | "newProject" | "importTree";
+export type BrowseMode = "openProject" | "newProject" | "importTree" | "openLog";
 
 export type DialogState =
   | { kind: "browse"; mode: BrowseMode }

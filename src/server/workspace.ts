@@ -124,7 +124,7 @@ export class Workspace {
     };
   }
 
-  /** Lists a directory: subdirectories (marking projects) and .xml files. */
+  /** Lists a directory: subdirectories (marking projects), .xml files and .btlog files. */
   async browse(path: string): Promise<BrowseResult> {
     const dir = this.checkPath(path);
     if (!existsSync(dir) || !statSync(dir).isDirectory()) throw new ProjectError(`${dir} is not a directory`, 404);
@@ -134,11 +134,19 @@ export class Workspace {
       const full = join(dir, e.name);
       if (e.isDirectory()) entries.push({ name: e.name, kind: "dir", isProject: isProjectDir(full) });
       else if (e.isFile() && extname(e.name) === ".xml") entries.push({ name: e.name, kind: "xml" });
+      else if (e.isFile() && extname(e.name) === ".btlog") entries.push({ name: e.name, kind: "btlog" });
     }
-    entries.sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name) : a.kind === "dir" ? -1 : 1));
+    entries.sort((a, b) => Number(b.kind === "dir") - Number(a.kind === "dir") || a.name.localeCompare(b.name));
     const parent = dirname(dir);
     const parentAllowed = parent !== dir && (!this.limit || dir !== this.limit);
     return { path: dir, parent: parentAllowed ? parent : null, isProject: isProjectDir(dir), entries };
+  }
+
+  /** Reads a .btlog for the UI to replay; the UI parses it. */
+  async readLog(path: string): Promise<Buffer> {
+    const src = this.checkPath(path);
+    if (extname(src) !== ".btlog" || !existsSync(src) || !statSync(src).isFile()) throw new ProjectError(`${src} is not a .btlog file`, 404);
+    return readFile(src);
   }
 
   /**

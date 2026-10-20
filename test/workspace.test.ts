@@ -36,15 +36,19 @@ describe("workspace", () => {
     expect((await ws.info()).recent.map((r) => r.path)).toEqual([join(dir, "fresh")]);
   });
 
-  it("browses directories, marking projects and listing .xml files", async () => {
+  it("browses directories, marking projects and listing .xml and .btlog files", async () => {
     const { dir, ws } = await setup();
     await writeFile(join(dir, "loose.xml"), "<root/>");
+    await writeFile(join(dir, "run.btlog"), "log");
     await writeFile(join(dir, "notes.txt"), "");
     const r = await ws.browse(dir);
     expect(r.entries).toEqual([
       { name: "demo", kind: "dir", isProject: true },
       { name: "loose.xml", kind: "xml" },
+      { name: "run.btlog", kind: "btlog" },
     ]);
+    expect((await ws.readLog(join(dir, "run.btlog"))).toString()).toBe("log");
+    await expect(ws.readLog(join(dir, "notes.txt"))).rejects.toThrow(/not a .btlog/);
     expect(r.parent).not.toBeNull();
     await expect(ws.browse("relative/path")).rejects.toThrow(/absolute/);
   });
